@@ -173,10 +173,6 @@ function saveHotel() {
   } else {
     tripList.value.push(item)
   }
-  tripList.value.sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date)
-    return (a.startTime || '').localeCompare(b.startTime || '')
-  })
   editingIndex.value = null
   hotelDialogVisible.value = false
 }
@@ -202,10 +198,6 @@ function saveTrip() {
   } else {
     tripList.value.push(item)
   }
-  tripList.value.sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date)
-    return (a.startTime || '').localeCompare(b.startTime || '')
-  })
   editingIndex.value = null
   tripDialogVisible.value = false
 }
