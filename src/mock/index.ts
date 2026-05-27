@@ -1,0 +1,1 @@
+export { departments, employees, trips } from './data'
