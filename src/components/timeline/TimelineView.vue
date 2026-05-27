@@ -212,7 +212,13 @@ function handleTripLeave() {
 }
 
 function goToToday() {
-  store.setCurrentDate(dayjs().format('YYYY-MM-DD'))
+  const today = dayjs().format('YYYY-MM-DD')
+  const idx = dates.value.indexOf(today)
+  if (idx !== -1) {
+    const scrollLeft = idx * dayWidth - bodyScrollRef.value!.clientWidth / 2 + dayWidth / 2
+    if (bodyScrollRef.value) bodyScrollRef.value.scrollLeft = Math.max(0, scrollLeft)
+    if (headerScrollRef.value) headerScrollRef.value.scrollLeft = Math.max(0, scrollLeft)
+  }
 }
 </script>
 
@@ -223,17 +229,17 @@ function goToToday() {
         <h2 class="page-title">企业出差行程管理系统</h2>
       </div>
       
-      <div class="toolbar-center">
+      <div class="toolbar-center" />
+      
+      <div class="toolbar-right">
+        <el-button size="small" type="primary" @click="goToToday">今天</el-button>
+        
         <el-radio-group v-model="store.viewMode" size="small">
           <el-radio-button value="day">日</el-radio-button>
           <el-radio-button value="week">周</el-radio-button>
           <el-radio-button value="month">月</el-radio-button>
         </el-radio-group>
-        
-        <el-button size="small" type="primary" @click="goToToday">今天</el-button>
       </div>
-      
-      <div class="toolbar-right" />
     </div>
 
     <!-- 时间轴区域 -->
