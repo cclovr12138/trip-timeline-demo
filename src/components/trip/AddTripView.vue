@@ -85,15 +85,30 @@ const tripDetailForm = ref({
   transportType: 'train' as 'train' | 'plane' | 'car',
   transportNo: '',
   date: '',
-  timeSlot: '',
+  startTime: '',
+  endTime: '',
   attachment: '',
   remark: '',
 })
 
 const timeSlots = [
-  '06:00-08:00', '08:00-10:00', '10:00-12:00',
-  '12:00-14:00', '14:00-16:00', '16:00-18:00',
-  '18:00-20:00', '20:00-22:00',
+  { label: '06:00', value: '06:00' },
+  { label: '07:00', value: '07:00' },
+  { label: '08:00', value: '08:00' },
+  { label: '09:00', value: '09:00' },
+  { label: '10:00', value: '10:00' },
+  { label: '11:00', value: '11:00' },
+  { label: '12:00', value: '12:00' },
+  { label: '13:00', value: '13:00' },
+  { label: '14:00', value: '14:00' },
+  { label: '15:00', value: '15:00' },
+  { label: '16:00', value: '16:00' },
+  { label: '17:00', value: '17:00' },
+  { label: '18:00', value: '18:00' },
+  { label: '19:00', value: '19:00' },
+  { label: '20:00', value: '20:00' },
+  { label: '21:00', value: '21:00' },
+  { label: '22:00', value: '22:00' },
 ]
 
 // 打开弹窗（新增 or 编辑）
@@ -124,20 +139,20 @@ function openTripDialog(index?: number) {
     if (item.placeType === 'travel') {
       const startTime = item.startTime || ''
       const endTime = item.endTime || ''
-      const existingSlot = startTime && endTime ? `${startTime}-${endTime}` : ''
       tripDetailForm.value = {
         startPlace: item.startPlace,
         endPlace: item.endPlace,
         transportType: item.category === 0 ? 'train' : item.category === 1 ? 'plane' : 'car',
         transportNo: item.transportNo || '',
         date: item.date,
-        timeSlot: existingSlot,
+        startTime: item.startTime || '',
+        endTime: item.endTime || '',
         attachment: '',
         remark: item.remark || '',
       }
     }
   } else {
-    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', timeSlot: '', attachment: '', remark: '' }
+    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', startTime: '', endTime: '', attachment: '', remark: '' }
   }
   tripDialogVisible.value = true
 }
@@ -164,7 +179,6 @@ function saveHotel() {
 
 function saveTrip() {
   const catMap: Record<string, 0 | 1 | 2> = { train: 0, plane: 1, car: 2 }
-  const timeSlot = tripDetailForm.value.timeSlot
   const item: DayLocationItem = {
     date: tripDetailForm.value.date,
     placeType: 'travel',
@@ -174,8 +188,8 @@ function saveTrip() {
     category: catMap[tripDetailForm.value.transportType],
     transportNo: tripDetailForm.value.transportNo,
     status: 'upcoming',
-    startTime: timeSlot ? timeSlot.split('-')[0] : '',
-    endTime: timeSlot ? timeSlot.split('-')[1] : '',
+    startTime: tripDetailForm.value.startTime,
+    endTime: tripDetailForm.value.endTime,
     remark: tripDetailForm.value.remark,
   }
   if (editingIndex.value !== null) {
@@ -452,9 +466,25 @@ function editItem(index: number) {
           <el-date-picker v-model="tripDetailForm.date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="时间区间">
-          <el-select v-model="tripDetailForm.timeSlot" placeholder="请选择时间段" style="width: 100%">
-            <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot" />
-          </el-select>
+          <div class="time-range">
+            <el-time-select
+              v-model="tripDetailForm.startTime"
+              placeholder="开始时间"
+              start="06:00"
+              step="00:30"
+              end="23:30"
+              style="width: 45%"
+            />
+            <span class="time-sep">至</span>
+            <el-time-select
+              v-model="tripDetailForm.endTime"
+              placeholder="结束时间"
+              start="06:00"
+              step="00:30"
+              end="23:30"
+              style="width: 45%"
+            />
+          </div>
         </el-form-item>
         <el-form-item label="附件">
           <el-upload action="#" :auto-upload="false" :limit="1">
