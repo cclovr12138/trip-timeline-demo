@@ -603,6 +603,78 @@ function goToToday() {
 </template>
 
 <style scoped>
+.dashboard-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.statistics-row {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-card {
+  flex: 1;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border: 1px solid #E5E6EB;
+  background: white;
+}
+
+.stat-card.stat-blue {
+  border-left: 3px solid rgb(64, 158, 255);
+}
+
+.stat-card.stat-green {
+  border-left: 3px solid rgb(103, 194, 58);
+}
+
+.stat-card.stat-orange {
+  border-left: 3px solid rgb(230, 162, 60);
+}
+
+.stat-card.stat-violet {
+  border-left: 3px solid rgb(114, 46, 209);
+}
+
+.stat-card.stat-red {
+  border-left: 3px solid rgb(245, 108, 108);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.stat-card.stat-blue .stat-value {
+  color: rgb(64, 158, 255);
+}
+
+.stat-card.stat-green .stat-value {
+  color: rgb(103, 194, 58);
+}
+
+.stat-card.stat-orange .stat-value {
+  color: rgb(230, 162, 60);
+}
+
+.stat-card.stat-violet .stat-value {
+  color: rgb(114, 46, 209);
+}
+
+.stat-card.stat-red .stat-value {
+  color: rgb(245, 108, 108);
+}
+
+
 .timeline-container {
   display: flex;
   flex-direction: column;
