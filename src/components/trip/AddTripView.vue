@@ -171,6 +171,11 @@ function saveHotel() {
   } else {
     tripList.value.push(item)
   }
+  // 按日期+时间排序
+  tripList.value.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    return (a.startTime || '').localeCompare(b.startTime || '')
+  })
   hotelDialogVisible.value = false
   editingIndex.value = null
 }
@@ -196,6 +201,11 @@ function saveTrip() {
   } else {
     tripList.value.push(item)
   }
+  // 按日期+时间排序
+  tripList.value.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    return (a.startTime || '').localeCompare(b.startTime || '')
+  })
   tripDialogVisible.value = false
   editingIndex.value = null
 }
