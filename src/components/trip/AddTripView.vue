@@ -85,8 +85,7 @@ const tripDetailForm = ref({
   transportType: 'train' as 'train' | 'plane' | 'car',
   transportNo: '',
   date: '',
-  startTime: '',
-  endTime: '',
+  timeSlot: '',
   attachment: '',
   remark: '',
 })
@@ -123,20 +122,22 @@ function openTripDialog(index?: number) {
   if (index !== undefined && index < tripList.value.length) {
     const item = tripList.value[index]
     if (item.placeType === 'travel') {
+      const startTime = item.startTime || ''
+      const endTime = item.endTime || ''
+      const existingSlot = startTime && endTime ? `${startTime}-${endTime}` : ''
       tripDetailForm.value = {
         startPlace: item.startPlace,
         endPlace: item.endPlace,
         transportType: item.category === 0 ? 'train' : item.category === 1 ? 'plane' : 'car',
         transportNo: item.transportNo || '',
         date: item.date,
-        startTime: item.startTime || '',
-        endTime: item.endTime || '',
+        timeSlot: existingSlot,
         attachment: '',
         remark: item.remark || '',
       }
     }
   } else {
-    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', startTime: '', endTime: '', attachment: '', remark: '' }
+    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', timeSlot: '', attachment: '', remark: '' }
   }
   tripDialogVisible.value = true
 }
@@ -163,6 +164,7 @@ function saveHotel() {
 
 function saveTrip() {
   const catMap: Record<string, 0 | 1 | 2> = { train: 0, plane: 1, car: 2 }
+  const timeSlot = tripDetailForm.value.timeSlot
   const item: DayLocationItem = {
     date: tripDetailForm.value.date,
     placeType: 'travel',
@@ -172,12 +174,15 @@ function saveTrip() {
     category: catMap[tripDetailForm.value.transportType],
     transportNo: tripDetailForm.value.transportNo,
     status: 'upcoming',
-    startTime: tripDetailForm.value.startTime,
-    endTime: tripDetailForm.value.endTime,
+    startTime: timeSlot ? timeSlot.split('-')[0] : '',
+    endTime: timeSlot ? timeSlot.split('-')[1] : '',
     remark: tripDetailForm.value.remark,
   }
   if (editingIndex.value !== null) {
     tripList.value[editingIndex.value] = item
+  } else {
+    tripList.value.push(item)
+  }
   } else {
     tripList.value.push(item)
   }
@@ -450,12 +455,8 @@ function editItem(index: number) {
           <el-date-picker v-model="tripDetailForm.date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="时间区间">
-          <el-select v-model="tripDetailForm.startTime" placeholder="开始" style="width: 45%">
-            <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot.split('-')[0]" />
-          </el-select>
-          <span class="time-sep">至</span>
-          <el-select v-model="tripDetailForm.endTime" placeholder="结束" style="width: 45%">
-            <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot.split('-')[1]" />
+          <el-select v-model="tripDetailForm.timeSlot" placeholder="请选择时间段" style="width: 100%">
+            <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot" />
           </el-select>
         </el-form-item>
         <el-form-item label="附件">
