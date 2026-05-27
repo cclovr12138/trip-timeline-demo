@@ -414,6 +414,7 @@ function saveTrip() {
 .timeline-card {
   border-radius: 8px;
   border: 1px solid #E5E6EB;
+  background: white;
 }
 
 .card-header {
@@ -435,6 +436,7 @@ function saveTrip() {
 .iterate-btn {
   padding: 4px 8px;
   border-radius: 4px;
+  color: rgb(130, 189, 164);
 }
 
 .iterate-icon {
@@ -451,7 +453,6 @@ function saveTrip() {
 .info-display {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .info-row {
@@ -500,6 +501,15 @@ function saveTrip() {
   gap: 6px;
   font-size: 13px;
   border-radius: 6px;
+  background: rgb(130, 189, 164);
+  border-color: rgb(130, 189, 164);
+  color: #fff;
+}
+
+.action-btn:hover {
+  background: rgb(150, 209, 184);
+  border-color: rgb(150, 209, 184);
+  color: #fff;
 }
 
 .btn-icon {

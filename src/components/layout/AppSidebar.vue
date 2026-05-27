@@ -114,7 +114,7 @@ function navigate(path: string) {
 
 .nav-item.active {
   color: #fff;
-  background: rgb(130, 189, 164);
+  background: rgb(103, 194, 58);
 }
 
 .nav-icon {
