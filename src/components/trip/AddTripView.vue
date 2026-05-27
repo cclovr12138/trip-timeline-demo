@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useTripStore } from '@/stores/trip'
 import { TRIP_STATUS_LABELS, TRANSPORT_ICONS, TRANSPORT_COLORS } from '@/types'
 import type { DayLocationItem } from '@/types'
@@ -8,7 +8,7 @@ const store = useTripStore()
 
 const isEditing = ref(false)
 
-// 出差基本信息（编辑时的数据）
+// 出差基本信息
 const tripForm = ref({
   empName: '员工A',
   email: 'employeA@example.com',
@@ -19,8 +19,6 @@ const tripForm = ref({
   purpose: '',
   managers: [] as string[],
 })
-
-// 备份（取消时恢复）
 const formBackup = ref({ ...tripForm.value })
 
 const employees = [
@@ -30,12 +28,15 @@ const employees = [
 ]
 const currentEmpIdx = ref(0)
 
+// ========================
+// 行程数据（从弹窗填写）
+// ========================
+const tripList = ref<DayLocationItem[]>([])
+
 function toggleEdit() {
   if (isEditing.value) {
-    // 保存
     isEditing.value = false
   } else {
-    // 开始编辑，备份当前数据
     formBackup.value = { ...tripForm.value }
     isEditing.value = true
   }
@@ -57,11 +58,13 @@ function iterateEmployee() {
   tripForm.value.email = emp.email
 }
 
+// ========================
 // 弹窗
+// ========================
 const hotelDialogVisible = ref(false)
 const tripDialogVisible = ref(false)
+const editingIndex = ref<number | null>(null)
 
-// 酒店信息
 const hotelForm = ref({
   checkInDate: '',
   checkOutDate: '',
@@ -71,7 +74,6 @@ const hotelForm = ref({
   remark: '',
 })
 
-// 行程信息
 const tripDetailForm = ref({
   startPlace: '',
   endPlace: '',
@@ -90,14 +92,97 @@ const timeSlots = [
   '18:00-20:00', '20:00-22:00',
 ]
 
-const mockDayItems: DayLocationItem[] = [
-  { date: '2026-05-20', placeType: 'travel', placeName: '北京', startPlace: '北京', endPlace: '上海', category: 0, transportNo: 'G1', status: 'finished' },
-  { date: '2026-05-20', placeType: 'hotel', placeName: '上海', hotelName: '如家酒店', roomType: '标准间', status: 'finished' },
-  { date: '2026-05-21', placeType: 'travel', placeName: '上海', startPlace: '上海', endPlace: '广州', category: 1, transportNo: 'MU1234', status: 'finished' },
-  { date: '2026-05-21', placeType: 'hotel', placeName: '广州', hotelName: '汉庭酒店', roomType: '大床房', status: 'finished' },
-  { date: '2026-05-22', placeType: 'travel', placeName: '广州', startPlace: '广州', endPlace: '深圳', category: 2, transportNo: '', status: 'finished' },
-]
+// 打开弹窗（新增 or 编辑）
+function openHotelDialog(index?: number) {
+  editingIndex.value = index !== undefined ? index : null
+  if (index !== undefined && index < tripList.value.length) {
+    const item = tripList.value[index]
+    if (item.placeType === 'hotel') {
+      hotelForm.value = {
+        checkInDate: item.date,
+        checkOutDate: item.endDate || item.date,
+        city: item.placeName,
+        hotelName: item.hotelName || '',
+        attachment: '',
+        remark: item.remark || '',
+      }
+    }
+  } else {
+    hotelForm.value = { checkInDate: '', checkOutDate: '', city: '', hotelName: '', attachment: '', remark: '' }
+  }
+  hotelDialogVisible.value = true
+}
 
+function openTripDialog(index?: number) {
+  editingIndex.value = index !== undefined ? index : null
+  if (index !== undefined && index < tripList.value.length) {
+    const item = tripList.value[index]
+    if (item.placeType === 'travel') {
+      tripDetailForm.value = {
+        startPlace: item.startPlace,
+        endPlace: item.endPlace,
+        transportType: item.category === 0 ? 'train' : item.category === 1 ? 'plane' : 'car',
+        transportNo: item.transportNo || '',
+        date: item.date,
+        startTime: item.startTime || '',
+        endTime: item.endTime || '',
+        attachment: '',
+        remark: item.remark || '',
+      }
+    }
+  } else {
+    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', startTime: '', endTime: '', attachment: '', remark: '' }
+  }
+  tripDialogVisible.value = true
+}
+
+function saveHotel() {
+  const item: DayLocationItem = {
+    date: hotelForm.value.checkInDate,
+    endDate: hotelForm.value.checkOutDate,
+    placeType: 'hotel',
+    placeName: hotelForm.value.city,
+    hotelName: hotelForm.value.hotelName,
+    roomType: '',
+    status: 'upcoming',
+    remark: hotelForm.value.remark,
+  }
+  if (editingIndex.value !== null) {
+    tripList.value[editingIndex.value] = item
+  } else {
+    tripList.value.push(item)
+  }
+  hotelDialogVisible.value = false
+  editingIndex.value = null
+}
+
+function saveTrip() {
+  const catMap: Record<string, 0 | 1 | 2> = { train: 0, plane: 1, car: 2 }
+  const item: DayLocationItem = {
+    date: tripDetailForm.value.date,
+    placeType: 'travel',
+    placeName: tripDetailForm.value.endPlace,
+    startPlace: tripDetailForm.value.startPlace,
+    endPlace: tripDetailForm.value.endPlace,
+    category: catMap[tripDetailForm.value.transportType],
+    transportNo: tripDetailForm.value.transportNo,
+    status: 'upcoming',
+    startTime: tripDetailForm.value.startTime,
+    endTime: tripDetailForm.value.endTime,
+    remark: tripDetailForm.value.remark,
+  }
+  if (editingIndex.value !== null) {
+    tripList.value[editingIndex.value] = item
+  } else {
+    tripList.value.push(item)
+  }
+  tripDialogVisible.value = false
+  editingIndex.value = null
+}
+
+// ========================
+// 时间线渲染
+// ========================
 function getItemColor(item: DayLocationItem): string {
   if (item.placeType === 'hotel') return '#67C23A'
   return TRANSPORT_COLORS[item.category] ?? '#909399'
@@ -109,6 +194,7 @@ function getItemIcon(item: DayLocationItem): string {
 }
 
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '-'
   const d = new Date(dateStr)
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
@@ -119,24 +205,13 @@ function formatDisplayDate(date: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function openHotelDialog() {
-  hotelDialogVisible.value = true
-}
-
-function openTripDialog() {
-  tripDialogVisible.value = true
-}
-
-function saveHotel() {
-  console.log('保存酒店:', hotelForm.value)
-  hotelDialogVisible.value = false
-  hotelForm.value = { checkInDate: '', checkOutDate: '', city: '', hotelName: '', attachment: '', remark: '' }
-}
-
-function saveTrip() {
-  console.log('保存行程:', tripDetailForm.value)
-  tripDialogVisible.value = false
-  tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', startTime: '', endTime: '', attachment: '', remark: '' }
+function editItem(index: number) {
+  const item = tripList.value[index]
+  if (item.placeType === 'hotel') {
+    openHotelDialog(index)
+  } else {
+    openTripDialog(index)
+  }
 }
 </script>
 
@@ -168,7 +243,7 @@ function saveTrip() {
             </div>
           </template>
 
-          <!-- 查看模式：纯文本展示 -->
+          <!-- 查看模式 -->
           <div v-if="!isEditing" class="info-display">
             <div class="info-row">
               <span class="info-label">员工姓名</span>
@@ -204,7 +279,7 @@ function saveTrip() {
             </div>
           </div>
 
-          <!-- 编辑模式：表单输入 -->
+          <!-- 编辑模式 -->
           <el-form v-else label-width="90px" label-position="left" class="trip-form">
             <el-form-item label="员工姓名">
               <el-input v-model="tripForm.empName" placeholder="请输入员工姓名" />
@@ -237,11 +312,11 @@ function saveTrip() {
 
         <!-- 行程安排按钮 -->
         <div class="action-buttons">
-          <el-button type="primary" class="action-btn" @click="openHotelDialog">
+          <el-button type="primary" class="action-btn" @click="openHotelDialog()">
             <span class="btn-icon">🏨</span>
             <span class="btn-text">添加酒店信息</span>
           </el-button>
-          <el-button type="primary" class="action-btn" @click="openTripDialog">
+          <el-button type="primary" class="action-btn" @click="openTripDialog()">
             <span class="btn-icon">✈</span>
             <span class="btn-text">添加行程信息</span>
           </el-button>
@@ -255,14 +330,16 @@ function saveTrip() {
             <div class="card-header">🗓 行程安排明细</div>
           </template>
 
-          <div class="trip-timeline">
+          <el-empty v-if="tripList.length === 0" description="暂无行程明细，请点击上方按钮添加" />
+
+          <div v-else class="trip-timeline">
             <div
-              v-for="(item, idx) in mockDayItems"
+              v-for="(item, idx) in tripList"
               :key="idx"
               class="timeline-item"
               :class="[item.placeType, 'item-' + item.status]"
             >
-              <div v-if="idx < mockDayItems.length - 1" class="timeline-line" />
+              <div v-if="idx < tripList.length - 1" class="timeline-line" />
               <div
                 class="timeline-dot"
                 :style="{
@@ -274,7 +351,10 @@ function saveTrip() {
                 {{ getItemIcon(item) }}
               </div>
               <div class="timeline-content">
-                <div class="timeline-date">{{ formatDate(item.date) }} {{ TRIP_STATUS_LABELS[item.status] }}</div>
+                <div class="timeline-header">
+                  <span class="timeline-date">{{ formatDate(item.date) }} {{ TRIP_STATUS_LABELS[item.status] }}</span>
+                  <el-button text size="small" class="item-edit-btn" @click="editItem(idx)">编辑</el-button>
+                </div>
                 <div v-if="item.placeType === 'travel'" class="travel-detail">
                   <div class="travel-route">{{ item.startPlace }} → {{ item.endPlace }}</div>
                   <div class="travel-no">
@@ -294,7 +374,13 @@ function saveTrip() {
     </div>
 
     <!-- 酒店弹窗 -->
-    <el-dialog v-model="hotelDialogVisible" title="添加酒店信息" width="500px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="hotelDialogVisible"
+      title="添加酒店信息"
+      width="500px"
+      :close-on-click-modal="false"
+      class="sync-dialog"
+    >
       <el-form label-width="90px" label-position="left" class="dialog-form">
         <el-form-item label="入住日">
           <el-date-picker v-model="hotelForm.checkInDate" type="date" placeholder="选择入住日期" style="width: 100%" />
@@ -319,12 +405,18 @@ function saveTrip() {
       </el-form>
       <template #footer>
         <el-button @click="hotelDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveHotel">保存</el-button>
+        <el-button type="primary" class="sync-btn" @click="saveHotel">保存</el-button>
       </template>
     </el-dialog>
 
     <!-- 行程弹窗 -->
-    <el-dialog v-model="tripDialogVisible" title="添加行程信息" width="500px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="tripDialogVisible"
+      title="添加行程信息"
+      width="500px"
+      :close-on-click-modal="false"
+      class="sync-dialog"
+    >
       <el-form label-width="90px" label-position="left" class="dialog-form">
         <el-form-item label="出发地">
           <el-input v-model="tripDetailForm.startPlace" placeholder="请输入出发地" />
@@ -365,7 +457,7 @@ function saveTrip() {
       </el-form>
       <template #footer>
         <el-button @click="tripDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveTrip">保存</el-button>
+        <el-button type="primary" class="sync-btn" @click="saveTrip">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -449,7 +541,12 @@ function saveTrip() {
   transform: rotate(45deg);
 }
 
-/* 查看模式 - 纯文本展示 */
+.edit-btn:hover,
+.iterate-btn:hover {
+  color: rgb(103, 194, 58);
+}
+
+/* 查看模式 */
 .info-display {
   display: flex;
   flex-direction: column;
@@ -512,14 +609,6 @@ function saveTrip() {
   color: #fff;
 }
 
-.btn-icon {
-  font-size: 16px;
-}
-
-.btn-text {
-  font-weight: 500;
-}
-
 /* 时间线 */
 .trip-timeline {
   display: flex;
@@ -570,10 +659,26 @@ function saveTrip() {
   min-width: 0;
 }
 
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
 .timeline-date {
   font-size: 11px;
   color: #909399;
-  margin-bottom: 3px;
+}
+
+.item-edit-btn {
+  color: rgb(130, 189, 164);
+  font-size: 11px;
+  padding: 0 2px;
+}
+
+.item-edit-btn:hover {
+  color: rgb(103, 194, 58);
 }
 
 .travel-detail,
@@ -622,5 +727,42 @@ function saveTrip() {
   text-align: center;
   color: #909399;
   line-height: 32px;
+}
+</style>
+
+<!-- 全局覆盖弹窗配色 -->
+<style>
+/* 弹窗标题+按钮同步主色 */
+.sync-dialog .el-dialog__header {
+  background: rgb(130, 189, 164);
+  border-radius: 8px 8px 0 0;
+}
+
+.sync-dialog .el-dialog__title {
+  color: #fff;
+  font-weight: 600;
+}
+
+.sync-dialog .el-dialog__headerbtn .el-dialog__close {
+  color: #fff;
+}
+
+.sync-dialog .el-dialog__headerbtn:hover .el-dialog__close {
+  color: #fff;
+}
+
+/* 底部按钮 */
+.sync-dialog .el-dialog__footer {
+  border-top: 1px solid #F0F0F0;
+}
+
+.sync-btn {
+  background: rgb(130, 189, 164) !important;
+  border-color: rgb(130, 189, 164) !important;
+}
+
+.sync-btn:hover {
+  background: rgb(150, 209, 184) !important;
+  border-color: rgb(150, 209, 184) !important;
 }
 </style>
