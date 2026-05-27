@@ -232,7 +232,7 @@ function goToToday() {
       <div class="toolbar-center" />
       
       <div class="toolbar-right">
-        <el-button size="small" type="primary" @click="goToToday">今天</el-button>
+        <el-button size="small" type="primary" @click="goToToday" class="today-btn">今天</el-button>
         
         <el-radio-group v-model="store.viewMode" size="small">
           <el-radio-button value="day">日</el-radio-button>
