@@ -215,9 +215,9 @@ function goToToday() {
   const today = dayjs().format('YYYY-MM-DD')
   const idx = dates.value.indexOf(today)
   if (idx !== -1) {
-    const scrollLeft = idx * dayWidth - bodyScrollRef.value!.clientWidth / 2 + dayWidth / 2
-    if (bodyScrollRef.value) bodyScrollRef.value.scrollLeft = Math.max(0, scrollLeft)
-    if (headerScrollRef.value) headerScrollRef.value.scrollLeft = Math.max(0, scrollLeft)
+    const scrollLeft = idx * dayWidth
+    if (bodyScrollRef.value) bodyScrollRef.value.scrollLeft = scrollLeft
+    if (headerScrollRef.value) headerScrollRef.value.scrollLeft = scrollLeft
   }
 }
 </script>
