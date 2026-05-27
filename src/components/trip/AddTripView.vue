@@ -32,6 +32,11 @@ const currentEmpIdx = ref(0)
 // 行程数据（从弹窗填写）
 // ========================
 const tripList = ref<DayLocationItem[]>([])
+const editMode = ref(false)
+
+function editAllTrips() {
+  editMode.value = !editMode.value
+}
 
 function toggleEdit() {
   if (isEditing.value) {
@@ -327,7 +332,13 @@ function editItem(index: number) {
       <div class="right-section">
         <el-card class="timeline-card" shadow="never">
           <template #header>
-            <div class="card-header">🗓 行程安排明细</div>
+            <div class="card-header">
+              <span>🗓 行程安排明细</span>
+              <el-button text size="small" class="timeline-edit-btn" @click="editAllTrips">
+                <span class="btn-icon">✏️</span>
+                <span>编辑</span>
+              </el-button>
+            </div>
           </template>
 
           <el-empty v-if="tripList.length === 0" description="暂无行程明细，请点击上方按钮添加" />
@@ -337,7 +348,8 @@ function editItem(index: number) {
               v-for="(item, idx) in tripList"
               :key="idx"
               class="timeline-item"
-              :class="[item.placeType, 'item-' + item.status]"
+              :class="{ 'is-editable': editMode, 'item-finished': item.status === 'finished', 'item-upcoming': item.status === 'upcoming', 'item-ongoing': item.status === 'ongoing' }"
+              @click="editMode && editItem(idx)"
             >
               <div v-if="idx < tripList.length - 1" class="timeline-line" />
               <div
@@ -353,7 +365,7 @@ function editItem(index: number) {
               <div class="timeline-content">
                 <div class="timeline-header">
                   <span class="timeline-date">{{ formatDate(item.date) }} {{ TRIP_STATUS_LABELS[item.status] }}</span>
-                  <el-button text size="small" class="item-edit-btn" @click="editItem(idx)">编辑</el-button>
+                  <el-button v-if="editMode" text size="small" class="item-edit-btn" @click.stop="editItem(idx)">编辑</el-button>
                 </div>
                 <div v-if="item.placeType === 'travel'" class="travel-detail">
                   <div class="travel-route">{{ item.startPlace }} → {{ item.endPlace }}</div>
@@ -609,6 +621,28 @@ function editItem(index: number) {
   color: #fff;
 }
 
+.timeline-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timeline-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgb(130, 189, 164);
+  font-size: 12px;
+}
+
+.timeline-edit-btn:hover {
+  color: rgb(103, 194, 58);
+}
+
+.timeline-edit-btn .btn-icon {
+  font-size: 12px;
+}
+
 /* 时间线 */
 .trip-timeline {
   display: flex;
@@ -621,6 +655,17 @@ function editItem(index: number) {
   gap: 10px;
   position: relative;
   padding-bottom: 14px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+  cursor: default;
+}
+
+.timeline-item.is-editable {
+  cursor: pointer;
+}
+
+.timeline-item.is-editable:hover {
+  background: rgba(130, 189, 164, 0.08);
 }
 
 .timeline-item:last-child {
@@ -711,54 +756,47 @@ function editItem(index: number) {
 }
 
 /* 弹窗 */
-.dialog-form {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.transport-group {
-  display: flex;
-  gap: 16px;
-}
-
-.time-sep {
-  width: 20px;
-  text-align: center;
-  color: #909399;
-  line-height: 32px;
-}
-</style>
-
-<!-- 全局覆盖弹窗配色 -->
-<style>
-/* 弹窗标题+按钮同步主色 */
 .sync-dialog .el-dialog__header {
-  background: rgb(130, 189, 164);
+  background: linear-gradient(135deg, rgb(130, 189, 164) 0%, rgb(150, 209, 184) 100%);
   border-radius: 8px 8px 0 0;
+  padding: 16px 20px;
+  margin: 0;
 }
 
 .sync-dialog .el-dialog__title {
   color: #fff;
+  font-size: 15px;
   font-weight: 600;
 }
 
+.sync-dialog .el-dialog__headerbtn {
+  top: 16px;
+  right: 16px;
+}
+
 .sync-dialog .el-dialog__headerbtn .el-dialog__close {
-  color: #fff;
+  color: rgba(255,255,255,0.8);
+  font-size: 16px;
 }
 
 .sync-dialog .el-dialog__headerbtn:hover .el-dialog__close {
   color: #fff;
 }
 
+.sync-dialog .el-dialog__body {
+  padding: 20px;
+}
+
 /* 底部按钮 */
 .sync-dialog .el-dialog__footer {
+  padding: 12px 20px;
   border-top: 1px solid #F0F0F0;
 }
 
 .sync-btn {
   background: rgb(130, 189, 164) !important;
   border-color: rgb(130, 189, 164) !important;
+  color: #fff !important;
 }
 
 .sync-btn:hover {
