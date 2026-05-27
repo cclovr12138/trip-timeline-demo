@@ -9,6 +9,7 @@ interface Props {
   rangeStart: string
   dayWidth: number
   rowHeight: number
+  hoveredEmpId: string | null
 }
 
 const props = defineProps<Props>()
@@ -65,7 +66,7 @@ function handleMouseLeave() {
 </script>
 
 <template>
-  <div class="timeline-row" :style="{ height: rowHeight + 'px' }">
+  <div class="timeline-row" :class="{ 'is-hovered': row.empId === hoveredEmpId }" :style="{ height: rowHeight + 'px' }">
     <div
       v-for="item in visibleTrips"
       :key="item.trip.id"
