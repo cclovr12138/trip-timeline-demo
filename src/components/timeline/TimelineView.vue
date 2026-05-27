@@ -343,6 +343,7 @@ function goToToday() {
             :key="row.empId + '-emp'"
             class="employee-row"
             :class="{ 'is-hovered': hoveredEmpId === row.empId, 'is-selected': selectedEmpId === row.empId }"
+            :style="{ height: rowHeight + 'px' }"
             @click="handleEmployeeClick(row.empId)"
             @mouseenter="hoveredEmpId = row.empId"
             @mouseleave="hoveredEmpId = null"
