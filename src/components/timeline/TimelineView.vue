@@ -310,7 +310,33 @@ function goToToday() {
 </script>
 
 <template>
-  <div class="timeline-container">
+  <div class="dashboard-view">
+    <div class="statistics-row">
+      <div class="stat-card stat-blue">
+        <div class="stat-label">今日出差</div>
+        <div class="stat-value">{{ store.statistics.todayTripCount }}</div>
+      </div>
+      <div class="stat-card stat-green">
+        <div class="stat-label">本周出差</div>
+        <div class="stat-value">{{ store.statistics.weekTripCount }}</div>
+      </div>
+      <div class="stat-card stat-orange">
+        <div class="stat-label">即将返程</div>
+        <div class="stat-value">{{ store.statistics.returningCount }}</div>
+      </div>
+      <div class="stat-card stat-violet">
+        <div class="stat-label">海外出差</div>
+        <div class="stat-value">{{ store.statistics.overseasCount }}</div>
+      </div>
+      <div class="stat-card stat-red">
+        <div class="stat-label">行程冲突</div>
+        <div class="stat-value">{{ store.statistics.conflictCount }}</div>
+      </div>
+    </div>
+
+    <FilterPanel :departments="store.departmentList" />
+
+    <div class="timeline-container">
     <div class="timeline-toolbar">
       <div class="toolbar-left">
         <h2 class="page-title">企业出差行程管理系统</h2>
@@ -572,6 +598,7 @@ function goToToday() {
         </div>
       </template>
     </el-drawer>
+    </div>
   </div>
 </template>
 
