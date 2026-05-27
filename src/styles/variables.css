@@ -1,0 +1,42 @@
+:root {
+  /* 主色 */
+  --color-primary: rgb(130, 189, 164);
+  --color-primary-dark: rgb(110, 169, 144);
+  --color-primary-light: rgb(150, 209, 184);
+
+  /* 侧边导航背景 - 深蓝紫色 */
+  --color-sidebar: rgb(27, 26, 87);
+
+  /* 页面背景 - 淡紫色 */
+  --color-bg-page: rgb(243, 243, 253);
+
+  /* 卡片背景 */
+  --color-bg-card: white;
+
+  /* 文字颜色 */
+  --color-text-primary: #303133;
+  --color-text-secondary: #606266;
+  --color-text-muted: #909399;
+
+  /* 边框 */
+  --color-border: #E5E6EB;
+  --color-border-light: #EBEEF5;
+
+  /* 状态色 */
+  --color-success: #67C23A;
+  --color-warning: #E6A23C;
+  --color-danger: #F56C6C;
+  --color-info: #409EFF;
+
+  /* 统计卡片色 */
+  --color-stat-blue: rgb(64, 158, 255);
+  --color-stat-green: rgb(103, 194, 58);
+  --color-stat-orange: rgb(230, 162, 60);
+  --color-stat-violet: rgb(114, 46, 209);
+  --color-stat-red: rgb(245, 108, 108);
+
+  /* 行程颜色 */
+  --trip-domestic: #82BDA4;
+  --trip-overseas: #722ED1;
+  --trip-conflict: #F56C6C;
+}
