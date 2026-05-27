@@ -85,8 +85,7 @@ const tripDetailForm = ref({
   transportType: 'train' as 'train' | 'plane' | 'car',
   transportNo: '',
   date: '',
-  startTime: '',
-  endTime: '',
+  timeRange: null as string[] | null,
   attachment: '',
   remark: '',
 })
@@ -145,14 +144,13 @@ function openTripDialog(index?: number) {
         transportType: item.category === 0 ? 'train' : item.category === 1 ? 'plane' : 'car',
         transportNo: item.transportNo || '',
         date: item.date,
-        startTime: item.startTime || '',
-        endTime: item.endTime || '',
+        timeRange: startTime && endTime ? [startTime, endTime] : null,
         attachment: '',
         remark: item.remark || '',
       }
     }
   } else {
-    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', startTime: '', endTime: '', attachment: '', remark: '' }
+    tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', timeRange: null, attachment: '', remark: '' }
   }
   tripDialogVisible.value = true
 }
@@ -179,6 +177,7 @@ function saveHotel() {
 
 function saveTrip() {
   const catMap: Record<string, 0 | 1 | 2> = { train: 0, plane: 1, car: 2 }
+  const timeRange = tripDetailForm.value.timeRange
   const item: DayLocationItem = {
     date: tripDetailForm.value.date,
     placeType: 'travel',
@@ -188,8 +187,8 @@ function saveTrip() {
     category: catMap[tripDetailForm.value.transportType],
     transportNo: tripDetailForm.value.transportNo,
     status: 'upcoming',
-    startTime: tripDetailForm.value.startTime,
-    endTime: tripDetailForm.value.endTime,
+    startTime: timeRange ? timeRange[0] : '',
+    endTime: timeRange ? timeRange[1] : '',
     remark: tripDetailForm.value.remark,
   }
   if (editingIndex.value !== null) {
@@ -466,23 +465,15 @@ function editItem(index: number) {
           <el-date-picker v-model="tripDetailForm.date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="时间区间">
-          <div class="time-range">
-            <el-time-picker
-              v-model="tripDetailForm.startTime"
-              placeholder="开始时间"
-              format="HH:mm"
-              value-format="HH:mm"
-              style="width: 45%"
-            />
-            <span class="time-sep">至</span>
-            <el-time-picker
-              v-model="tripDetailForm.endTime"
-              placeholder="结束时间"
-              format="HH:mm"
-              value-format="HH:mm"
-              style="width: 45%"
-            />
-          </div>
+          <el-time-picker
+            v-model="tripDetailForm.timeRange"
+            is-range
+            range-separator="至"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="请选择时间区间"
+            style="width: 100%"
+          />
         </el-form-item>
         <el-form-item label="附件">
           <el-upload action="#" :auto-upload="false" :limit="1">
