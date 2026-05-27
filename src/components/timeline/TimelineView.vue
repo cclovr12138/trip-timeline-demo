@@ -8,6 +8,26 @@ import TimelineRow from './TimelineRow.vue'
 
 const store = useTripStore()
 
+// 选中员工相关
+const selectedEmpId = ref<string | null>(null)
+const drawerVisible = ref(false)
+const hoveredEmpId = ref<string | null>(null)
+
+// 当前选中员工的完整数据
+const selectedEmployee = computed(() => {
+  if (!selectedEmpId.value) return null
+  return store.allTimelineData.find(row => row.empId === selectedEmpId.value) ?? null
+})
+
+function handleEmployeeClick(empId: string) {
+  selectedEmpId.value = empId
+  drawerVisible.value = true
+}
+
+function handleDrawerClose() {
+  drawerVisible.value = false
+}
+
 // 从mock数据中获取最早和最晚的日期范围
 const dataDateRange = computed(() => {
   let earliest = ''
@@ -215,9 +235,31 @@ function goToToday() {
   const today = dayjs().format('YYYY-MM-DD')
   const idx = dates.value.indexOf(today)
   if (idx !== -1) {
-    const scrollLeft = idx * dayWidth
-    if (bodyScrollRef.value) bodyScrollRef.value.scrollTo({ left: scrollLeft, behavior: 'smooth' })
-    if (headerScrollRef.value) headerScrollRef.value.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+    const scrollEl = bodyScrollRef.value
+    const headerEl = headerScrollRef.value
+    if (!scrollEl) return
+    const targetOffset = idx * dayWidth
+    const startOffset = scrollEl.scrollLeft
+    const delta = targetOffset - startOffset
+    const duration = 400
+    const startTime = performance.now()
+
+    function easeInOut(t: number) {
+      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+    }
+
+    function animate(now: number) {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = easeInOut(progress)
+      const currentOffset = startOffset + delta * eased
+      scrollEl.scrollLeft = currentOffset
+      if (headerEl) headerEl.scrollLeft = currentOffset
+      if (progress < 1) requestAnimationFrame(animate)
+    }
+
+
+    requestAnimationFrame(animate)
   }
 }
 </script>
@@ -232,7 +274,7 @@ function goToToday() {
       <div class="toolbar-center" />
       
       <div class="toolbar-right">
-        <el-button size="small" type="primary" @click="goToToday" class="today-btn">今天</el-button>
+        <button type="button" class="today-btn el-button el-button--primary el-button--small" @click.stop="goToToday">今天</button>
         
         <el-radio-group v-model="store.viewMode" size="small">
           <el-radio-button value="day">日</el-radio-button>
@@ -257,7 +299,11 @@ function goToToday() {
             v-for="row in store.filteredData"
             :key="row.empId + '-emp'"
             class="employee-cell"
+            :class="{ 'is-hovered': hoveredEmpId === row.empId, 'is-selected': selectedEmpId === row.empId }"
             :style="{ height: rowHeight + 'px' }"
+            @click="handleEmployeeClick(row.empId)"
+            @mouseenter="hoveredEmpId = row.empId"
+            @mouseleave="hoveredEmpId = null"
           >
             <div class="avatar">
               <span>{{ row.empName.slice(0, 1) }}</span>
@@ -353,6 +399,7 @@ function goToToday() {
                 :range-start="dateRangeStart"
                 :day-width="dayWidth"
                 :row-height="rowHeight"
+                :hovered-emp-id="hoveredEmpId"
                 @trip-hover="handleTripHover"
                 @trip-leave="handleTripLeave"
               />
@@ -381,6 +428,54 @@ function goToToday() {
         </div>
       </div>
     </Teleport>
+
+    <!-- 员工详情抽屉 -->
+    <el-drawer
+      v-model="drawerVisible"
+      :title="selectedEmployee ? selectedEmployee.empName + ' 的行程' : '员工行程'"
+      size="480px"
+      direction="rtl"
+      @close="handleDrawerClose"
+    >
+      <template v-if="selectedEmployee">
+        <div class="drawer-content">
+          <div class="drawer-emp-info">
+            <div class="drawer-avatar">
+              <span>{{ selectedEmployee.empName.slice(0, 1) }}</span>
+            </div>
+            <div class="drawer-info">
+              <div class="drawer-name">{{ selectedEmployee.empName }}</div>
+              <div class="drawer-dept">{{ selectedEmployee.deptName }} · {{ selectedEmployee.position }}</div>
+            </div>
+          </div>
+
+          <el-divider />
+
+
+          <div class="drawer-trips">
+            <div
+              v-for="trip in selectedEmployee.trips"
+              :key="trip.id"
+              class="drawer-trip-item"
+              :class="'trip-' + trip.status"
+            >
+              <div class="trip-row">
+                <span class="trip-city">{{ trip.city }}</span>
+                <el-tag size="small" :type="trip.status === 'ongoing' ? 'success' : trip.status === 'upcoming' ? 'warning' : 'info'" disable-transitions>
+                  {{ TRIP_STATUS_LABELS[trip.status] }}
+                </el-tag>
+              </div>
+              <div class="trip-date">{{ trip.startTime }} ~ {{ trip.endTime }}</div>
+              <div class="trip-type">
+                {{ trip.tripType === 'domestic' ? '国内出差' : '海外出差' }}
+              </div>
+            </div>
+
+            <el-empty v-if="selectedEmployee.trips.length === 0" description="暂无行程" />
+          </div>
+        </div>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
@@ -710,6 +805,122 @@ function goToToday() {
 
 .tooltip-status.finished {
   background: rgba(144, 147, 153, 0.15);
+  color: #909399;
+}
+
+/* 员工列 hover & 选中高亮 */
+.employee-cell {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.employee-cell.is-hovered {
+  background: #F5F7FA;
+}
+
+.employee-cell.is-selected {
+  background: #E8F5EE;
+}
+
+/* 抽屉样式 */
+.drawer-content {
+  padding: 0 4px;
+}
+
+.drawer-emp-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.drawer-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgb(130, 189, 164) 0%, rgb(150, 209, 184) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.drawer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+
+.drawer-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+
+.drawer-dept {
+  font-size: 12px;
+  color: #909399;
+}
+
+.drawer-trips {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drawer-trip-item {
+  border-radius: 8px;
+  padding: 12px 14px;
+  border-left: 3px solid;
+}
+
+.drawer-trip-item.trip-ongoing {
+  background: rgba(103, 194, 58, 0.08);
+  border-color: #67C23A;
+}
+
+.drawer-trip-item.trip-upcoming {
+  background: rgba(230, 162, 60, 0.08);
+  border-color: #E6A23C;
+}
+
+.drawer-trip-item.trip-finished {
+  background: rgba(144, 147, 153, 0.06);
+  border-color: #909399;
+}
+
+.drawer-trip-item.trip-conflict {
+  background: rgba(245, 108, 108, 0.08);
+  border-color: #F56C6C;
+}
+
+.trip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.trip-city {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+
+.trip-date {
+  font-size: 12px;
+  color: #606266;
+  margin-bottom: 3px;
+}
+
+.trip-type {
+  font-size: 11px;
   color: #909399;
 }
 </style>
