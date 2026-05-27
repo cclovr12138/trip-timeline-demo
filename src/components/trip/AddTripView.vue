@@ -467,21 +467,19 @@ function editItem(index: number) {
         </el-form-item>
         <el-form-item label="时间区间">
           <div class="time-range">
-            <el-time-select
+            <el-time-picker
               v-model="tripDetailForm.startTime"
               placeholder="开始时间"
-              start="06:00"
-              step="00:30"
-              end="23:30"
+              format="HH:mm"
+              value-format="HH:mm"
               style="width: 45%"
             />
             <span class="time-sep">至</span>
-            <el-time-select
+            <el-time-picker
               v-model="tripDetailForm.endTime"
               placeholder="结束时间"
-              start="06:00"
-              step="00:30"
-              end="23:30"
+              format="HH:mm"
+              value-format="HH:mm"
               style="width: 45%"
             />
           </div>
