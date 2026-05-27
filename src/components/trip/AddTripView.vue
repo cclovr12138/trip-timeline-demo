@@ -6,10 +6,9 @@ import type { DayLocationItem } from '@/types'
 
 const store = useTripStore()
 
-// 选中员工
-const selectedEmpId = ref('')
+const isEditing = ref(false)
 
-// 出差基本信息
+// 出差基本信息（编辑时的数据）
 const tripForm = ref({
   empName: '员工A',
   email: 'employeA@example.com',
@@ -21,13 +20,35 @@ const tripForm = ref({
   managers: [] as string[],
 })
 
+// 备份（取消时恢复）
+const formBackup = ref({ ...tripForm.value })
+
 const employees = [
   { id: '1', name: '员工A', email: 'employeA@example.com' },
   { id: '2', name: '员工B', email: 'employeB@example.com' },
   { id: '3', name: '员工C', email: 'employeC@example.com' },
 ]
-
 const currentEmpIdx = ref(0)
+
+function toggleEdit() {
+  if (isEditing.value) {
+    // 保存
+    isEditing.value = false
+  } else {
+    // 开始编辑，备份当前数据
+    formBackup.value = { ...tripForm.value }
+    isEditing.value = true
+  }
+}
+
+function cancelEdit() {
+  tripForm.value = { ...formBackup.value }
+  isEditing.value = false
+}
+
+function saveEdit() {
+  isEditing.value = false
+}
 
 function iterateEmployee() {
   currentEmpIdx.value = (currentEmpIdx.value + 1) % employees.length
@@ -69,7 +90,6 @@ const timeSlots = [
   '18:00-20:00', '20:00-22:00',
 ]
 
-// mock已有的行程数据（后续替换成接口）
 const mockDayItems: DayLocationItem[] = [
   { date: '2026-05-20', placeType: 'travel', placeName: '北京', startPlace: '北京', endPlace: '上海', category: 0, transportNo: 'G1', status: 'finished' },
   { date: '2026-05-20', placeType: 'hotel', placeName: '上海', hotelName: '如家酒店', roomType: '标准间', status: 'finished' },
@@ -91,6 +111,12 @@ function getItemIcon(item: DayLocationItem): string {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
+function formatDisplayDate(date: string): string {
+  if (!date) return '-'
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function openHotelDialog() {
@@ -127,12 +153,59 @@ function saveTrip() {
           <template #header>
             <div class="card-header">
               <span>📋 出差基本信息</span>
-              <el-button text class="iterate-btn" @click="iterateEmployee" title="遍历员工">
-                <span class="iterate-icon">🔄</span>
-              </el-button>
+              <div class="header-actions">
+                <template v-if="isEditing">
+                  <el-button size="small" @click="cancelEdit">取消</el-button>
+                  <el-button size="small" type="primary" @click="saveEdit">保存</el-button>
+                </template>
+                <template v-else>
+                  <el-button size="small" text @click="toggleEdit" class="edit-btn">编辑</el-button>
+                  <el-button text @click="iterateEmployee" class="iterate-btn" title="遍历员工">
+                    <span class="iterate-icon">🔄</span>
+                  </el-button>
+                </template>
+              </div>
             </div>
           </template>
-          <el-form label-width="90px" label-position="left" class="trip-form">
+
+          <!-- 查看模式：纯文本展示 -->
+          <div v-if="!isEditing" class="info-display">
+            <div class="info-row">
+              <span class="info-label">员工姓名</span>
+              <span class="info-value">{{ tripForm.empName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">邮箱</span>
+              <span class="info-value">{{ tripForm.email }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">出发日</span>
+              <span class="info-value">{{ formatDisplayDate(tripForm.startDate) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">到达日</span>
+              <span class="info-value">{{ formatDisplayDate(tripForm.endDate) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">出发地</span>
+              <span class="info-value">{{ tripForm.startPlace || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">目的地</span>
+              <span class="info-value">{{ tripForm.endPlace || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">出差目的</span>
+              <span class="info-value">{{ tripForm.purpose || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">出差负责人</span>
+              <span class="info-value">{{ tripForm.managers.length > 0 ? tripForm.managers.join('、') : '-' }}</span>
+            </div>
+          </div>
+
+          <!-- 编辑模式：表单输入 -->
+          <el-form v-else label-width="90px" label-position="left" class="trip-form">
             <el-form-item label="员工姓名">
               <el-input v-model="tripForm.empName" placeholder="请输入员工姓名" />
             </el-form-item>
@@ -343,20 +416,6 @@ function saveTrip() {
   border: 1px solid #E5E6EB;
 }
 
-.iterate-btn {
-  padding: 4px;
-  border-radius: 4px;
-}
-
-.iterate-icon {
-  font-size: 14px;
-}
-
-.iterate-btn:hover .iterate-icon {
-  transform: rotate(45deg);
-  transition: transform 0.2s ease;
-}
-
 .card-header {
   font-size: 13px;
   font-weight: 600;
@@ -366,6 +425,61 @@ function saveTrip() {
   justify-content: space-between;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-btn,
+.iterate-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.iterate-icon {
+  font-size: 14px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.iterate-btn:hover .iterate-icon {
+  transform: rotate(45deg);
+}
+
+/* 查看模式 - 纯文本展示 */
+.info-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 90px;
+  font-size: 12px;
+  color: #909399;
+  flex-shrink: 0;
+}
+
+.info-value {
+  flex: 1;
+  font-size: 13px;
+  color: #303133;
+  word-break: break-all;
+}
+
+/* 编辑模式表单 */
 .trip-form {
   display: flex;
   flex-direction: column;
