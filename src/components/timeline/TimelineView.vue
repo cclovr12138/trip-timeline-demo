@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
-import type { ViewMode, TripItem } from '@/types'
+import type { ViewMode, TripItem, DayLocationItem } from '@/types'
 import { useTripStore } from '@/stores/trip'
-import { TRIP_STATUS_LABELS } from '@/types'
+import { TRIP_STATUS_LABELS, TRANSPORT_ICONS, TRANSPORT_COLORS } from '@/types'
+import { getEmployeeDailyLocation, enrichTripsWithDayItems } from '@/mock/locations'
 import TimelineRow from './TimelineRow.vue'
 
 const store = useTripStore()
@@ -13,25 +14,55 @@ const selectedEmpId = ref<string | null>(null)
 const drawerVisible = ref(false)
 const hoveredEmpId = ref<string | null>(null)
 
-// 当前选中员工的完整数据
+// 当前选中员工的完整数据（含每日明细）
 const selectedEmployee = computed(() => {
   if (!selectedEmpId.value) return null
-  return store.allTimelineData.find(row => row.empId === selectedEmpId.value) ?? null
+  const row = store.allTimelineData.find(r => r.empId === selectedEmpId.value)
+  if (!row) return null
+  return {
+    ...row,
+    trips: enrichTripsWithDayItems(row.trips, row.empId),
+  }
 })
 
 // 计算员工当前所在地（今日行程目的地）
 const employeeCurrentLocation = computed(() => {
-  const map = new Map<string, string>()
+  const map = new Map<string, DayLocationItem[]>()
   const today = dayjs().format('YYYY-MM-DD')
   const todayObj = dayjs(today)
   for (const row of store.allTimelineData) {
-    const activeTrip = row.trips.find(trip => {
-      return !todayObj.isBefore(dayjs(trip.startTime), 'day') && !todayObj.isAfter(dayjs(trip.endTime), 'day')
-    })
-    map.set(row.empId, activeTrip ? activeTrip.city : '-')
+    const dailyItems = getEmployeeDailyLocation(row.empId, today)
+    map.set(row.empId, dailyItems)
   }
   return map
 })
+
+// 单元格显示文本（120px内显示的内容）
+function getLocationDisplayText(items: DayLocationItem[]): string {
+  if (!items || items.length === 0) return '-'
+  // 优先显示 ongoing 的 travel
+  const ongoingTravel = items.find(i => i.placeType === 'travel' && i.status === 'ongoing')
+  const upcomingTravel = items.find(i => i.placeType === 'travel' && i.status === 'upcoming')
+  const travel = ongoingTravel ?? upcomingTravel
+  if (travel) {
+    const icon = travel.category !== undefined ? TRANSPORT_ICONS[travel.category] : ''
+    const dest = travel.endPlace ?? travel.placeName
+    const travelCount = items.filter(i => i.placeType === 'travel').length
+    const hotelCount = items.filter(i => i.placeType === 'hotel').length
+    let text = `${icon} ${dest}`
+    if (hotelCount > 0) text += ` 🏠×${hotelCount}`
+    if (travelCount > 1) text += ` +${travelCount - 1}`
+    return text
+  }
+  // 只有酒店
+  const hotelCount = items.filter(i => i.placeType === 'hotel').length
+  const hotel = items.find(i => i.placeType === 'hotel')
+  if (hotel) {
+    const name = hotel.hotelName ?? hotel.placeName
+    return hotelCount > 1 ? `🏠 ${name} ×${hotelCount}` : `🏠 ${name}`
+  }
+  return '-'
+}
 
 function handleEmployeeClick(empId: string) {
   selectedEmpId.value = empId
@@ -323,7 +354,15 @@ function goToToday() {
               <div class="name">{{ row.empName }}</div>
             </div>
             <div class="employee-location">
-              {{ employeeCurrentLocation.get(row.empId) ?? '-' }}
+              <el-tooltip
+                v-if="(employeeCurrentLocation.get(row.empId) ?? []).length > 1"
+                :content="getLocationDisplayText(employeeCurrentLocation.get(row.empId) ?? [])"
+                placement="top"
+                effect="light"
+              >
+                <span class="location-text">{{ getLocationDisplayText(employeeCurrentLocation.get(row.empId) ?? []) }}</span>
+              </el-tooltip>
+              <span v-else class="location-text">{{ getLocationDisplayText(employeeCurrentLocation.get(row.empId) ?? []) }}</span>
             </div>
           </div>
           <div v-if="store.filteredData.length === 0" class="empty-employee">
@@ -472,19 +511,59 @@ function goToToday() {
             <div
               v-for="trip in selectedEmployee.trips"
               :key="trip.id"
-              class="drawer-trip-item"
-              :class="'trip-' + trip.status"
+              class="drawer-trip-card"
+              :class="'status-' + trip.status"
             >
-              <div class="trip-row">
-                <span class="trip-city">{{ trip.city }}</span>
+              <!-- 行程头 -->
+              <div class="trip-card-header">
+                <div class="trip-card-title">
+                  <span class="trip-city-name">{{ trip.city }}</span>
+                  <span class="trip-card-range">{{ trip.startTime }} ~ {{ trip.endTime }}</span>
+                </div>
                 <el-tag size="small" :type="trip.status === 'ongoing' ? 'success' : trip.status === 'upcoming' ? 'warning' : 'info'" disable-transitions>
                   {{ TRIP_STATUS_LABELS[trip.status] }}
                 </el-tag>
               </div>
-              <div class="trip-date">{{ trip.startTime }} ~ {{ trip.endTime }}</div>
-              <div class="trip-type">
-                {{ trip.tripType === 'domestic' ? '国内出差' : '海外出差' }}
+
+              <!-- 每日时间线 -->
+              <div v-if="trip.dayItems && trip.dayItems.length > 0" class="trip-timeline">
+                <div
+                  v-for="(item, idx) in trip.dayItems"
+                  :key="idx"
+                  class="timeline-item"
+                  :class="[item.placeType, 'item-' + item.status]"
+                >
+                  <!-- 连接线（除最后一个） -->
+                  <div v-if="idx < trip.dayItems.length - 1" class="timeline-line" />
+
+                  <!-- 图标点 -->
+                  <div class="timeline-dot" :class="item.placeType">
+                    <span v-if="item.placeType === 'hotel'">🏠</span>
+                    <span v-else-if="item.category !== undefined">{{ TRANSPORT_ICONS[item.category] }}</span>
+                    <span v-else>📍</span>
+                  </div>
+
+                  <!-- 内容 -->
+                  <div class="timeline-content">
+                    <div class="timeline-date">{{ item.date }}</div>
+
+                    <div v-if="item.placeType === 'travel'" class="travel-detail">
+                      <span class="travel-route">
+                        {{ item.startPlace }} → {{ item.endPlace }}
+                      </span>
+                      <span v-if="item.transportNo" class="travel-no" :style="{ color: item.category !== undefined ? TRANSPORT_COLORS[item.category] : '' }">
+                        {{ item.category !== undefined ? (item.category === 0 ? '高铁 ' : item.category === 1 ? '飞机 ' : '汽车 ') : '' }}{{ item.transportNo }}
+                      </span>
+                    </div>
+
+                    <div v-else class="hotel-detail">
+                      <span class="hotel-name">{{ item.hotelName || item.placeName }}</span>
+                      <span v-if="item.roomType" class="hotel-room">{{ item.roomType }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+              <div v-else class="trip-no-detail">暂无明细</div>
             </div>
 
             <el-empty v-if="selectedEmployee.trips.length === 0" description="暂无行程" />
@@ -633,6 +712,16 @@ function goToToday() {
   border-left: 1px solid #EBEEF5;
   box-sizing: border-box;
   min-width: 0;
+}
+
+
+.location-text {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 
@@ -927,57 +1016,178 @@ function goToToday() {
 .drawer-trips {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-.drawer-trip-item {
-  border-radius: 8px;
-  padding: 12px 14px;
-  border-left: 3px solid;
+/* 行程卡片 */
+.drawer-trip-card {
+  border-radius: 10px;
+  padding: 14px 16px;
+  border-left: 4px solid;
 }
 
-.drawer-trip-item.trip-ongoing {
-  background: rgba(103, 194, 58, 0.08);
+.drawer-trip-card.status-ongoing {
+  background: rgba(103, 194, 58, 0.06);
   border-color: #67C23A;
 }
 
-.drawer-trip-item.trip-upcoming {
-  background: rgba(230, 162, 60, 0.08);
+.drawer-trip-card.status-upcoming {
+  background: rgba(230, 162, 60, 0.06);
   border-color: #E6A23C;
 }
 
-.drawer-trip-item.trip-finished {
-  background: rgba(144, 147, 153, 0.06);
+.drawer-trip-card.status-finished {
+  background: rgba(144, 147, 153, 0.04);
   border-color: #909399;
 }
 
-.drawer-trip-item.trip-conflict {
-  background: rgba(245, 108, 108, 0.08);
+.drawer-trip-card.status-conflict {
+  background: rgba(245, 108, 108, 0.06);
   border-color: #F56C6C;
 }
 
-.trip-row {
+/* 行程卡片头部 */
+.trip-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
-.trip-city {
-  font-size: 14px;
+.trip-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trip-city-name {
+  font-size: 15px;
   font-weight: 600;
   color: #303133;
 }
 
-
-.trip-date {
-  font-size: 12px;
-  color: #606266;
-  margin-bottom: 3px;
-}
-
-.trip-type {
+.trip-card-range {
   font-size: 11px;
   color: #909399;
+}
+
+/* 时间线 */
+.trip-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+
+/* 垂直连接线 */
+.timeline-line {
+  position: absolute;
+  left: 9px;
+  top: 22px;
+  bottom: 0;
+  width: 1px;
+  background: #E0E0E0;
+  border-left: 1px dashed #D0D0D0;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+/* 图标点 */
+.timeline-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  background: white;
+  border: 1.5px solid;
+}
+
+.timeline-dot.hotel {
+  border-color: #67C23A;
+  color: #67C23A;
+}
+
+.timeline-dot.travel {
+  border-color: #409EFF;
+  color: #409EFF;
+}
+
+
+.timeline-item.item-ongoing .timeline-dot {
+  background: #67C23A;
+  color: white;
+  border-color: #67C23A;
+}
+
+.timeline-item.item-upcoming .timeline-dot {
+  background: #E6A23C;
+  color: white;
+  border-color: #E6A23C;
+}
+
+/* 时间线内容 */
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-date {
+  font-size: 10px;
+  color: #909399;
+  margin-bottom: 2px;
+}
+
+.travel-detail,
+.hotel-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.travel-route {
+  font-size: 12px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.travel-no {
+  font-size: 10px;
+}
+
+.hotel-name {
+  font-size: 12px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.hotel-room {
+  font-size: 10px;
+  color: #909399;
+}
+
+.trip-no-detail {
+  font-size: 11px;
+  color: #C0C0C0;
+  text-align: center;
+  padding: 6px 0;
 }
 </style>
