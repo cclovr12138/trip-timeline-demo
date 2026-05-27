@@ -164,6 +164,8 @@ function saveHotel() {
     hotelName: hotelForm.value.hotelName,
     roomType: '',
     status: 'upcoming',
+    startTime: '14:00',
+    endTime: '12:00',
     remark: hotelForm.value.remark,
   }
   if (editingIndex.value !== null) {
@@ -175,8 +177,8 @@ function saveHotel() {
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     return (a.startTime || '').localeCompare(b.startTime || '')
   })
-  hotelDialogVisible.value = false
   editingIndex.value = null
+  hotelDialogVisible.value = false
 }
 
 function saveTrip() {
@@ -204,8 +206,8 @@ function saveTrip() {
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     return (a.startTime || '').localeCompare(b.startTime || '')
   })
-  tripDialogVisible.value = false
   editingIndex.value = null
+  tripDialogVisible.value = false
 }
 
 // ========================
