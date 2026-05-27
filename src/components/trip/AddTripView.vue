@@ -448,7 +448,7 @@ function editItem(index: number) {
       </el-form>
       <template #footer>
         <el-button @click="hotelDialogVisible = false">取消</el-button>
-        <el-button type="primary" class="sync-btn" @click="saveHotel">保存</el-button>
+        <el-button type="primary" class="sync-btn" @click="saveHotel(); hotelDialogVisible = false">保存</el-button>
       </template>
     </el-dialog>
 
@@ -502,7 +502,7 @@ function editItem(index: number) {
       </el-form>
       <template #footer>
         <el-button @click="tripDialogVisible = false">取消</el-button>
-        <el-button type="primary" class="sync-btn" @click="saveTrip">保存</el-button>
+        <el-button type="primary" class="sync-btn" @click="saveTrip(); tripDialogVisible = false">保存</el-button>
       </template>
     </el-dialog>
   </div>
