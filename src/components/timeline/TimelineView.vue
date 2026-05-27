@@ -216,8 +216,8 @@ function goToToday() {
   const idx = dates.value.indexOf(today)
   if (idx !== -1) {
     const scrollLeft = idx * dayWidth
-    if (bodyScrollRef.value) bodyScrollRef.value.scrollLeft = scrollLeft
-    if (headerScrollRef.value) headerScrollRef.value.scrollLeft = scrollLeft
+    if (bodyScrollRef.value) bodyScrollRef.value.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+    if (headerScrollRef.value) headerScrollRef.value.scrollTo({ left: scrollLeft, behavior: 'smooth' })
   }
 }
 </script>
