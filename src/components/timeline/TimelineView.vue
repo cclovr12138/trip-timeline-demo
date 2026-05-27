@@ -333,7 +333,7 @@ function goToToday() {
     <div class="timeline-main">
       <!-- 左侧员工列（固定） -->
       <div class="employee-column">
-        <div class="employee-header">
+        <div class="employee-header" :style="{ height: headerTotalHeight + 'px' }">
           <div class="employee-header-cell">员工</div>
           <div class="employee-header-cell location-header">当前所在地</div>
         </div>
@@ -661,7 +661,6 @@ function goToToday() {
   background: #F5F7FA;
   border-bottom: 1px solid #E5E6EB;
   flex-shrink: 0;
-  height: 40px;
 }
 
 .employee-header-cell {
@@ -684,7 +683,6 @@ function goToToday() {
 .employee-row {
   display: flex;
   align-items: center;
-  height: 40px;
   border-bottom: 1px solid #EBEEF5;
   box-sizing: border-box;
   cursor: pointer;
