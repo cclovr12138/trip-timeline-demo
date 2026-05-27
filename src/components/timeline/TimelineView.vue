@@ -605,7 +605,7 @@ function goToToday() {
 .employee-row {
   display: flex;
   align-items: center;
-
+  height: 40px;
   border-bottom: 1px solid #EBEEF5;
   box-sizing: border-box;
   cursor: pointer;
