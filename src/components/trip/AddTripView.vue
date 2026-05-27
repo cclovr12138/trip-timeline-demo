@@ -11,8 +11,8 @@ const selectedEmpId = ref('')
 
 // 出差基本信息
 const tripForm = ref({
-  empName: '',
-  email: '',
+  empName: '员工A',
+  email: 'employeA@example.com',
   startDate: '',
   endDate: '',
   startPlace: '',
@@ -20,6 +20,21 @@ const tripForm = ref({
   purpose: '',
   managers: [] as string[],
 })
+
+const employees = [
+  { id: '1', name: '员工A', email: 'employeA@example.com' },
+  { id: '2', name: '员工B', email: 'employeB@example.com' },
+  { id: '3', name: '员工C', email: 'employeC@example.com' },
+]
+
+const currentEmpIdx = ref(0)
+
+function iterateEmployee() {
+  currentEmpIdx.value = (currentEmpIdx.value + 1) % employees.length
+  const emp = employees[currentEmpIdx.value]
+  tripForm.value.empName = emp.name
+  tripForm.value.email = emp.email
+}
 
 // 弹窗
 const hotelDialogVisible = ref(false)
@@ -110,7 +125,12 @@ function saveTrip() {
       <div class="left-section">
         <el-card class="form-card" shadow="never">
           <template #header>
-            <div class="card-header">📋 出差基本信息</div>
+            <div class="card-header">
+              <span>📋 出差基本信息</span>
+              <el-button text class="iterate-btn" @click="iterateEmployee" title="遍历员工">
+                <span class="iterate-icon">🔄</span>
+              </el-button>
+            </div>
           </template>
           <el-form label-width="90px" label-position="left" class="trip-form">
             <el-form-item label="员工姓名">
@@ -323,10 +343,27 @@ function saveTrip() {
   border: 1px solid #E5E6EB;
 }
 
+.iterate-btn {
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.iterate-icon {
+  font-size: 14px;
+}
+
+.iterate-btn:hover .iterate-icon {
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
 .card-header {
   font-size: 13px;
   font-weight: 600;
   color: #303133;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .trip-form {
