@@ -183,9 +183,6 @@ function saveTrip() {
   } else {
     tripList.value.push(item)
   }
-  } else {
-    tripList.value.push(item)
-  }
   tripDialogVisible.value = false
   editingIndex.value = null
 }
