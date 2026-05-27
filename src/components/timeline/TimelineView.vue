@@ -19,6 +19,20 @@ const selectedEmployee = computed(() => {
   return store.allTimelineData.find(row => row.empId === selectedEmpId.value) ?? null
 })
 
+// 计算员工当前所在地（今日行程目的地）
+const employeeCurrentLocation = computed(() => {
+  const map = new Map<string, string>()
+  const today = dayjs().format('YYYY-MM-DD')
+  const todayObj = dayjs(today)
+  for (const row of store.allTimelineData) {
+    const activeTrip = row.trips.find(trip => {
+      return !todayObj.isBefore(dayjs(trip.startTime), 'day') && !todayObj.isAfter(dayjs(trip.endTime), 'day')
+    })
+    map.set(row.empId, activeTrip ? activeTrip.city : '-')
+  }
+  return map
+})
+
 function handleEmployeeClick(empId: string) {
   selectedEmpId.value = empId
   drawerVisible.value = true
@@ -288,27 +302,37 @@ function goToToday() {
     <div class="timeline-main">
       <!-- 左侧员工列（固定） -->
       <div class="employee-column">
-        <div 
-          class="employee-header" 
-          :style="{ height: employeeHeaderHeight + 'px' }"
-        >
-          员工
-        </div>
+          <div
+            class="employee-header-cell"
+            :style="{ height: employeeHeaderHeight + 'px' }"
+          >
+            员工
+          </div>
+          <div
+            class="employee-header-cell location-header"
+            :style="{ height: employeeHeaderHeight + 'px' }"
+          >
+            当前所在地
+          </div>
         <div class="employee-list">
           <div
             v-for="row in store.filteredData"
             :key="row.empId + '-emp'"
-            class="employee-cell"
+            class="employee-row"
             :class="{ 'is-hovered': hoveredEmpId === row.empId, 'is-selected': selectedEmpId === row.empId }"
-            :style="{ height: rowHeight + 'px' }"
             @click="handleEmployeeClick(row.empId)"
             @mouseenter="hoveredEmpId = row.empId"
             @mouseleave="hoveredEmpId = null"
           >
-            <div class="avatar">
-              <span>{{ row.empName.slice(0, 1) }}</span>
+            <div class="employee-main">
+              <div class="avatar">
+                <span>{{ row.empName.slice(0, 1) }}</span>
+              </div>
+              <div class="name">{{ row.empName }}</div>
             </div>
-            <div class="name">{{ row.empName }}</div>
+            <div class="employee-location">
+              {{ employeeCurrentLocation.get(row.empId) ?? '-' }}
+            </div>
           </div>
           <div v-if="store.filteredData.length === 0" class="empty-employee">
             暂无数据
@@ -577,14 +601,56 @@ function goToToday() {
   overflow-y: auto;
 }
 
-.employee-cell {
+.employee-header-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+  background: #F5F7FA;
+  border-bottom: 1px solid #E5E6EB;
+  flex-shrink: 0;
+  padding: 0 8px;
+}
+
+.employee-row {
+  display: flex;
+  align-items: center;
   height: 40px;
-  padding: 0 12px;
   border-bottom: 1px solid #EBEEF5;
   box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.employee-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 110px;
+  flex-shrink: 0;
+  padding: 0 8px;
+}
+
+.employee-location {
+  flex: 1;
+  font-size: 11px;
+  color: #606266;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 1px solid #EBEEF5;
+}
+
+
+.employee-row.is-hovered {
+  background: #F5F7FA;
+}
+
+.employee-row.is-selected {
+  background: #E8F5EE;
 }
 
 .avatar {
@@ -814,11 +880,11 @@ function goToToday() {
   transition: background 0.15s ease;
 }
 
-.employee-cell.is-hovered {
+.employee-row.is-hovered {
   background: #F5F7FA;
 }
 
-.employee-cell.is-selected {
+.employee-row.is-selected {
   background: #E8F5EE;
 }
 
