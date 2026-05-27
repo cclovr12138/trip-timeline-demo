@@ -6,6 +6,7 @@ import { useTripStore } from '@/stores/trip'
 import { TRIP_STATUS_LABELS, TRANSPORT_ICONS, TRANSPORT_COLORS } from '@/types'
 import { getEmployeeDailyLocation, enrichTripsWithDayItems } from '@/mock/locations'
 import TimelineRow from './TimelineRow.vue'
+import FilterPanel from '@/components/filters/FilterPanel.vue'
 
 const store = useTripStore()
 
