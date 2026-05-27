@@ -568,7 +568,7 @@ function goToToday() {
 
 /* 左侧员工列 */
 .employee-column {
-  width: 120px;
+  width: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -593,11 +593,13 @@ function goToToday() {
   font-weight: 500;
   color: #606266;
   flex-shrink: 0;
+  width: 120px;
   height: 100%;
+  box-sizing: border-box;
 }
 
 .location-header {
-  flex: 1;
+  width: 120px;
 }
 
 .employee-row {
@@ -614,14 +616,14 @@ function goToToday() {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 110px;
+  width: 120px;
   flex-shrink: 0;
   padding: 0 8px;
   box-sizing: border-box;
 }
 
 .employee-location {
-  flex: 1;
+  width: 120px;
   font-size: 11px;
   color: #606266;
   padding: 0 8px;
