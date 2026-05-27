@@ -359,7 +359,13 @@ function editItem(index: number) {
           <template #header>
             <div class="card-header">
               <span>🗓 行程安排明细</span>
-              <el-button text size="small" class="timeline-edit-btn" @click="editAllTrips">
+              <el-button
+                v-if="tripList.length > 0"
+                text
+                size="small"
+                class="timeline-edit-btn"
+                @click="editAllTrips"
+              >
                 <span class="btn-icon">{{ editMode ? '✕' : '✏️' }}</span>
                 <span>{{ editMode ? '取消' : '编辑' }}</span>
               </el-button>
