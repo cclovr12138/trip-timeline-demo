@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useTripStore } from '@/stores/trip'
+import { TRIP_STATUS_LABELS, TRANSPORT_ICONS, TRANSPORT_COLORS } from '@/types'
+import type { DayLocationItem } from '@/types'
 
 const store = useTripStore()
+
+// 选中员工
+const selectedEmpId = ref('')
 
 // 出差基本信息
 const tripForm = ref({
@@ -16,7 +21,7 @@ const tripForm = ref({
   managers: [] as string[],
 })
 
-// 弹窗控制
+// 弹窗
 const hotelDialogVisible = ref(false)
 const tripDialogVisible = ref(false)
 
@@ -43,17 +48,35 @@ const tripDetailForm = ref({
   remark: '',
 })
 
-const transportOptions = [
-  { value: 'train', label: '高铁' },
-  { value: 'plane', label: '飞机' },
-  { value: 'car', label: '汽车' },
-]
-
 const timeSlots = [
   '06:00-08:00', '08:00-10:00', '10:00-12:00',
   '12:00-14:00', '14:00-16:00', '16:00-18:00',
   '18:00-20:00', '20:00-22:00',
 ]
+
+// mock已有的行程数据（后续替换成接口）
+const mockDayItems: DayLocationItem[] = [
+  { date: '2026-05-20', placeType: 'travel', placeName: '北京', startPlace: '北京', endPlace: '上海', category: 0, transportNo: 'G1', status: 'finished' },
+  { date: '2026-05-20', placeType: 'hotel', placeName: '上海', hotelName: '如家酒店', roomType: '标准间', status: 'finished' },
+  { date: '2026-05-21', placeType: 'travel', placeName: '上海', startPlace: '上海', endPlace: '广州', category: 1, transportNo: 'MU1234', status: 'finished' },
+  { date: '2026-05-21', placeType: 'hotel', placeName: '广州', hotelName: '汉庭酒店', roomType: '大床房', status: 'finished' },
+  { date: '2026-05-22', placeType: 'travel', placeName: '广州', startPlace: '广州', endPlace: '深圳', category: 2, transportNo: '', status: 'finished' },
+]
+
+function getItemColor(item: DayLocationItem): string {
+  if (item.placeType === 'hotel') return '#67C23A'
+  return TRANSPORT_COLORS[item.category] ?? '#909399'
+}
+
+function getItemIcon(item: DayLocationItem): string {
+  if (item.placeType === 'hotel') return '🏨'
+  return TRANSPORT_ICONS[item.category] ?? '📍'
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
 
 function openHotelDialog() {
   hotelDialogVisible.value = true
@@ -66,14 +89,12 @@ function openTripDialog() {
 function saveHotel() {
   console.log('保存酒店:', hotelForm.value)
   hotelDialogVisible.value = false
-  // reset
   hotelForm.value = { checkInDate: '', checkOutDate: '', city: '', hotelName: '', attachment: '', remark: '' }
 }
 
 function saveTrip() {
   console.log('保存行程:', tripDetailForm.value)
   tripDialogVisible.value = false
-  // reset
   tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', startTime: '', endTime: '', attachment: '', remark: '' }
 }
 </script>
@@ -85,77 +106,95 @@ function saveTrip() {
     </div>
 
     <div class="add-trip-layout">
-      <!-- 左侧：出差基本信息 -->
-      <el-card class="info-card" shadow="never">
-        <template #header>
-          <div class="card-header">📋 出差基本信息</div>
-        </template>
-
-        <el-form label-width="100px" label-position="left" class="trip-form">
-          <el-form-item label="员工姓名">
-            <el-input v-model="tripForm.empName" placeholder="请输入员工姓名" />
-          </el-form-item>
-          <el-form-item label="邮箱">
-            <el-input v-model="tripForm.email" placeholder="请输入邮箱" />
-          </el-form-item>
-          <el-form-item label="出发日">
-            <el-date-picker
-              v-model="tripForm.startDate"
-              type="date"
-              placeholder="选择出发日期"
-              style="width: 100%"
-            />
-          </el-form-item>
-          <el-form-item label="到达日">
-            <el-date-picker
-              v-model="tripForm.endDate"
-              type="date"
-              placeholder="选择到达日期"
-              style="width: 100%"
-            />
-          </el-form-item>
-          <el-form-item label="出发地">
-            <el-input v-model="tripForm.startPlace" placeholder="请输入出发地" />
-          </el-form-item>
-          <el-form-item label="目的地">
-            <el-input v-model="tripForm.endPlace" placeholder="请输入目的地" />
-          </el-form-item>
-          <el-form-item label="出差目的">
-            <el-input v-model="tripForm.purpose" type="textarea" placeholder="请输入出差目的" :rows="3" />
-          </el-form-item>
-          <el-form-item label="出差负责人">
-            <el-select v-model="tripForm.managers" multiple placeholder="请选择负责人" style="width: 100%">
-              <el-option
-                v-for="emp in store.allTimelineData"
-                :key="emp.empId"
-                :label="emp.empName"
-                :value="emp.empId"
-              />
-            </el-select>
-          </el-form-item>
-        </el-form>
-      </el-card>
-
-      <!-- 右侧：酒店+行程按钮 -->
-      <div class="action-section">
-        <el-card class="action-card" shadow="never">
+      <!-- 左侧：出差信息 + 按钮 -->
+      <div class="left-section">
+        <el-card class="form-card" shadow="never">
           <template #header>
-            <div class="card-header">🗂 信息附件</div>
+            <div class="card-header">📋 出差基本信息</div>
+          </template>
+          <el-form label-width="90px" label-position="left" class="trip-form">
+            <el-form-item label="员工姓名">
+              <el-input v-model="tripForm.empName" placeholder="请输入员工姓名" />
+            </el-form-item>
+            <el-form-item label="邮箱">
+              <el-input v-model="tripForm.email" placeholder="请输入邮箱" />
+            </el-form-item>
+            <el-form-item label="出发日">
+              <el-date-picker v-model="tripForm.startDate" type="date" placeholder="选择出发日期" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="到达日">
+              <el-date-picker v-model="tripForm.endDate" type="date" placeholder="选择到达日期" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="出发地">
+              <el-input v-model="tripForm.startPlace" placeholder="请输入出发地" />
+            </el-form-item>
+            <el-form-item label="目的地">
+              <el-input v-model="tripForm.endPlace" placeholder="请输入目的地" />
+            </el-form-item>
+            <el-form-item label="出差目的">
+              <el-input v-model="tripForm.purpose" type="textarea" placeholder="请输入出差目的" :rows="2" />
+            </el-form-item>
+            <el-form-item label="出差负责人">
+              <el-select v-model="tripForm.managers" multiple placeholder="请选择负责人" style="width: 100%">
+                <el-option v-for="emp in store.allTimelineData" :key="emp.empId" :label="emp.empName" :value="emp.empId" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <!-- 行程安排按钮 -->
+        <div class="action-buttons">
+          <el-button type="primary" class="action-btn" @click="openHotelDialog">
+            <span class="btn-icon">🏨</span>
+            <span class="btn-text">添加酒店信息</span>
+          </el-button>
+          <el-button type="primary" class="action-btn" @click="openTripDialog">
+            <span class="btn-icon">✈</span>
+            <span class="btn-text">添加行程信息</span>
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 右侧：Timeline行程明细 -->
+      <div class="right-section">
+        <el-card class="timeline-card" shadow="never">
+          <template #header>
+            <div class="card-header">🗓 行程安排明细</div>
           </template>
 
-          <div class="action-buttons">
-            <el-button type="primary" plain class="action-btn" @click="openHotelDialog">
-              <span class="btn-icon">🏨</span>
-              <span class="btn-text">添加酒店信息</span>
-            </el-button>
-            <el-button type="primary" plain class="action-btn" @click="openTripDialog">
-              <span class="btn-icon">✈</span>
-              <span class="btn-text">添加行程信息</span>
-            </el-button>
-          </div>
-
-          <div class="action-hint">
-            点击上方按钮，为本次出差添加酒店住宿或出行行程信息
+          <div class="trip-timeline">
+            <div
+              v-for="(item, idx) in mockDayItems"
+              :key="idx"
+              class="timeline-item"
+              :class="[item.placeType, 'item-' + item.status]"
+            >
+              <div v-if="idx < mockDayItems.length - 1" class="timeline-line" />
+              <div
+                class="timeline-dot"
+                :style="{
+                  borderColor: getItemColor(item),
+                  color: item.status !== 'finished' ? '#fff' : getItemColor(item),
+                  background: item.status !== 'finished' ? getItemColor(item) : '#fff',
+                }"
+              >
+                {{ getItemIcon(item) }}
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-date">{{ formatDate(item.date) }} {{ TRIP_STATUS_LABELS[item.status] }}</div>
+                <div v-if="item.placeType === 'travel'" class="travel-detail">
+                  <div class="travel-route">{{ item.startPlace }} → {{ item.endPlace }}</div>
+                  <div class="travel-no">
+                    {{ item.category === 0 ? '高铁' : item.category === 1 ? '飞机' : '汽车' }}
+                    {{ item.transportNo ? ` / ${item.transportNo}` : '' }}
+                  </div>
+                </div>
+                <div v-else class="hotel-detail">
+                  <div class="hotel-name">{{ item.hotelName || item.placeName }}</div>
+                  <div v-if="item.roomType" class="hotel-room">{{ item.roomType }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </el-card>
       </div>
@@ -177,12 +216,7 @@ function saveTrip() {
           <el-input v-model="hotelForm.hotelName" placeholder="请输入酒店名称" />
         </el-form-item>
         <el-form-item label="附件">
-          <el-upload
-            action="#"
-            :auto-upload="false"
-            :limit="1"
-            class="upload-item"
-          >
+          <el-upload action="#" :auto-upload="false" :limit="1">
             <el-button size="small" type="primary">上传附件</el-button>
           </el-upload>
         </el-form-item>
@@ -190,7 +224,6 @@ function saveTrip() {
           <el-input v-model="hotelForm.remark" type="textarea" placeholder="请输入备注" :rows="2" />
         </el-form-item>
       </el-form>
-
       <template #footer>
         <el-button @click="hotelDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="saveHotel">保存</el-button>
@@ -220,16 +253,16 @@ function saveTrip() {
           <el-date-picker v-model="tripDetailForm.date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="时间区间">
-          <el-select v-model="tripDetailForm.startTime" placeholder="选择开始时间" style="width: 48%">
+          <el-select v-model="tripDetailForm.startTime" placeholder="开始" style="width: 45%">
             <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot.split('-')[0]" />
           </el-select>
-          <span class="time-separator">至</span>
-          <el-select v-model="tripDetailForm.endTime" placeholder="选择结束时间" style="width: 48%">
+          <span class="time-sep">至</span>
+          <el-select v-model="tripDetailForm.endTime" placeholder="结束" style="width: 45%">
             <el-option v-for="slot in timeSlots" :key="slot" :label="slot" :value="slot.split('-')[1]" />
           </el-select>
         </el-form-item>
         <el-form-item label="附件">
-          <el-upload action="#" :auto-upload="false" :limit="1" class="upload-item">
+          <el-upload action="#" :auto-upload="false" :limit="1">
             <el-button size="small" type="primary">上传附件</el-button>
           </el-upload>
         </el-form-item>
@@ -237,7 +270,6 @@ function saveTrip() {
           <el-input v-model="tripDetailForm.remark" type="textarea" placeholder="请输入备注" :rows="2" />
         </el-form-item>
       </el-form>
-
       <template #footer>
         <el-button @click="tripDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="saveTrip">保存</el-button>
@@ -272,18 +304,21 @@ function saveTrip() {
   min-height: 0;
 }
 
-.info-card {
-  flex: 1;
-  border-radius: 8px;
-  border: 1px solid #E5E6EB;
-}
-
-.action-section {
-  width: 280px;
+.left-section {
+  width: 360px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.action-card {
+.right-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-card,
+.timeline-card {
   border-radius: 8px;
   border: 1px solid #E5E6EB;
 }
@@ -297,43 +332,119 @@ function saveTrip() {
 .trip-form {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
-/* 信息附件 */
+/* 按钮横向排列 */
 .action-buttons {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
 }
 
 .action-btn {
-  height: 56px;
+  flex: 1;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 14px;
-  border-radius: 8px;
+  gap: 6px;
+  font-size: 13px;
+  border-radius: 6px;
 }
 
 .btn-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .btn-text {
   font-weight: 500;
 }
 
-.action-hint {
-  font-size: 11px;
-  color: #909399;
-  text-align: center;
-  line-height: 1.5;
+/* 时间线 */
+.trip-timeline {
+  display: flex;
+  flex-direction: column;
 }
 
-/* 弹窗表单 */
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 9px;
+  top: 22px;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed #D0D0D0;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+.timeline-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border: 1.5px solid;
+  background: white;
+}
+
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-date {
+  font-size: 11px;
+  color: #909399;
+  margin-bottom: 3px;
+}
+
+.travel-detail,
+.hotel-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.travel-route {
+  font-size: 13px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.travel-no {
+  font-size: 11px;
+  color: #909399;
+}
+
+.hotel-name {
+  font-size: 13px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.hotel-room {
+  font-size: 11px;
+  color: #909399;
+}
+
+/* 弹窗 */
 .dialog-form {
   display: flex;
   flex-direction: column;
@@ -345,14 +456,10 @@ function saveTrip() {
   gap: 16px;
 }
 
-.time-separator {
+.time-sep {
   width: 20px;
   text-align: center;
   color: #909399;
   line-height: 32px;
-}
-
-.upload-item {
-  display: inline-block;
 }
 </style>
