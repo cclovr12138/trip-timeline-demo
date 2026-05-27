@@ -302,18 +302,10 @@ function goToToday() {
     <div class="timeline-main">
       <!-- 左侧员工列（固定） -->
       <div class="employee-column">
-          <div
-            class="employee-header-cell"
-            :style="{ height: employeeHeaderHeight + 'px' }"
-          >
-            员工
-          </div>
-          <div
-            class="employee-header-cell location-header"
-            :style="{ height: employeeHeaderHeight + 'px' }"
-          >
-            当前所在地
-          </div>
+        <div class="employee-header">
+          <div class="employee-header-cell">员工</div>
+          <div class="employee-header-cell location-header">当前所在地</div>
+        </div>
         <div class="employee-list">
           <div
             v-for="row in store.filteredData"
@@ -587,18 +579,10 @@ function goToToday() {
 .employee-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 500;
-  color: #606266;
   background: #F5F7FA;
   border-bottom: 1px solid #E5E6EB;
   flex-shrink: 0;
-}
-
-.employee-list {
-  flex: 1;
-  overflow-y: auto;
+  height: 40px;
 }
 
 .employee-header-cell {
@@ -608,16 +592,18 @@ function goToToday() {
   font-size: 12px;
   font-weight: 500;
   color: #606266;
-  background: #F5F7FA;
-  border-bottom: 1px solid #E5E6EB;
   flex-shrink: 0;
-  padding: 0 8px;
+  height: 100%;
+}
+
+.location-header {
+  flex: 1;
 }
 
 .employee-row {
   display: flex;
   align-items: center;
-  height: 40px;
+
   border-bottom: 1px solid #EBEEF5;
   box-sizing: border-box;
   cursor: pointer;
@@ -631,6 +617,7 @@ function goToToday() {
   width: 110px;
   flex-shrink: 0;
   padding: 0 8px;
+  box-sizing: border-box;
 }
 
 .employee-location {
@@ -642,6 +629,8 @@ function goToToday() {
   overflow: hidden;
   text-overflow: ellipsis;
   border-left: 1px solid #EBEEF5;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 
