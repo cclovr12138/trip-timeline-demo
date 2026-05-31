@@ -24,7 +24,7 @@ html, body, #app {
 }
 
 body {
-  font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   background: rgb(243, 243, 253);
   color: #303133;
   -webkit-font-smoothing: antialiased;

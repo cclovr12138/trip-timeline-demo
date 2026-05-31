@@ -24,6 +24,7 @@ export function generateTimelineRows(): TimelineRow[] {
         city: t.city,
         tripType: t.tripType,
         status: t.status,
+        assistants: t.assistants,
       }))
     
     // 计算当前状态

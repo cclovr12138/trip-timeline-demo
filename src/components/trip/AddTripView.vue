@@ -64,10 +64,11 @@ function iterateEmployee() {
 }
 
 // ========================
-// 弹窗
+// 合并弹窗
 // ========================
-const hotelDialogVisible = ref(false)
-const tripDialogVisible = ref(false)
+const dialogVisible = ref(false)
+const dialogStep = ref<'choice' | 'hotel' | 'trip'>('choice')
+const dialogTitle = ref('选择添加类型')
 const editingIndex = ref<number | null>(null)
 
 const hotelForm = ref({
@@ -110,7 +111,13 @@ const timeSlots = [
   { label: '22:00', value: '22:00' },
 ]
 
-// 打开弹窗（新增 or 编辑）
+function openAddDialog() {
+  dialogStep.value = 'choice'
+  dialogTitle.value = '选择添加类型'
+  editingIndex.value = null
+  dialogVisible.value = true
+}
+
 function openHotelDialog(index?: number) {
   editingIndex.value = index !== undefined ? index : null
   if (index !== undefined && index < tripList.value.length) {
@@ -128,7 +135,9 @@ function openHotelDialog(index?: number) {
   } else {
     hotelForm.value = { checkInDate: '', checkOutDate: '', city: '', hotelName: '', attachment: '', remark: '' }
   }
-  hotelDialogVisible.value = true
+  dialogStep.value = 'hotel'
+  dialogTitle.value = '添加酒店信息'
+  dialogVisible.value = true
 }
 
 function openTripDialog(index?: number) {
@@ -152,7 +161,26 @@ function openTripDialog(index?: number) {
   } else {
     tripDetailForm.value = { startPlace: '', endPlace: '', transportType: 'train', transportNo: '', date: '', timeRange: null, attachment: '', remark: '' }
   }
-  tripDialogVisible.value = true
+  dialogStep.value = 'trip'
+  dialogTitle.value = '添加行程信息'
+  dialogVisible.value = true
+}
+
+function chooseType(type: 'hotel' | 'trip') {
+  if (type === 'hotel') {
+    openHotelDialog()
+  } else {
+    openTripDialog()
+  }
+}
+
+function backToChoice() {
+  dialogStep.value = 'choice'
+  dialogTitle.value = '选择添加类型'
+}
+
+function closeDialog() {
+  dialogVisible.value = false
 }
 
 function saveHotel() {
@@ -174,7 +202,7 @@ function saveHotel() {
     tripList.value.push(item)
   }
   editingIndex.value = null
-  hotelDialogVisible.value = false
+  closeDialog()
 }
 
 function saveTrip() {
@@ -199,7 +227,7 @@ function saveTrip() {
     tripList.value.push(item)
   }
   editingIndex.value = null
-  tripDialogVisible.value = false
+  closeDialog()
 }
 
 // ========================
@@ -332,17 +360,11 @@ function editItem(index: number) {
           </el-form>
         </el-card>
 
-        <!-- 行程安排按钮 -->
-        <div class="action-buttons">
-          <el-button type="primary" class="action-btn" @click="openHotelDialog()">
-            <span class="btn-icon">🏨</span>
-            <span class="btn-text">添加酒店信息</span>
-          </el-button>
-          <el-button type="primary" class="action-btn" @click="openTripDialog()">
-            <span class="btn-icon">✈</span>
-            <span class="btn-text">添加行程信息</span>
-          </el-button>
-        </div>
+        <!-- 合并后的添加按钮 -->
+        <el-button type="primary" class="action-btn" @click="openAddDialog">
+          <span class="btn-icon">📋</span>
+          <span class="btn-text">添加行程信息</span>
+        </el-button>
       </div>
 
       <!-- 右侧：Timeline行程明细 -->
@@ -408,15 +430,30 @@ function editItem(index: number) {
       </div>
     </div>
 
-    <!-- 酒店弹窗 -->
+    <!-- 合并弹窗 -->
     <el-dialog
-      v-model="hotelDialogVisible"
-      title="添加酒店信息"
+      v-model="dialogVisible"
+      :title="dialogTitle"
       width="500px"
       :close-on-click-modal="false"
       class="sync-dialog"
     >
-      <el-form label-width="90px" label-position="left" class="dialog-form">
+      <!-- Step 1: 选择类型 -->
+      <div v-if="dialogStep === 'choice'" class="type-choice">
+        <div class="type-card" @click="chooseType('hotel')">
+          <span class="type-icon">🏨</span>
+          <span class="type-label">添加酒店</span>
+          <span class="type-desc">录入入住酒店信息</span>
+        </div>
+        <div class="type-card" @click="chooseType('trip')">
+          <span class="type-icon">✈️</span>
+          <span class="type-label">添加行程</span>
+          <span class="type-desc">录入交通出行信息</span>
+        </div>
+      </div>
+
+      <!-- Step 2: 酒店表单 -->
+      <el-form v-else-if="dialogStep === 'hotel'" label-width="90px" label-position="left" class="dialog-form">
         <el-form-item label="入住日">
           <el-date-picker v-model="hotelForm.checkInDate" type="date" placeholder="选择入住日期" style="width: 100%" />
         </el-form-item>
@@ -438,21 +475,9 @@ function editItem(index: number) {
           <el-input v-model="hotelForm.remark" type="textarea" placeholder="请输入备注" :rows="2" />
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="hotelDialogVisible = false">取消</el-button>
-        <el-button type="primary" class="sync-btn" @click="saveHotel">保存</el-button>
-      </template>
-    </el-dialog>
 
-    <!-- 行程弹窗 -->
-    <el-dialog
-      v-model="tripDialogVisible"
-      title="添加行程信息"
-      width="500px"
-      :close-on-click-modal="false"
-      class="sync-dialog"
-    >
-      <el-form label-width="90px" label-position="left" class="dialog-form">
+      <!-- Step 3: 行程表单 -->
+      <el-form v-else-if="dialogStep === 'trip'" label-width="90px" label-position="left" class="dialog-form">
         <el-form-item label="出发地">
           <el-input v-model="tripDetailForm.startPlace" placeholder="请输入出发地" />
         </el-form-item>
@@ -492,9 +517,17 @@ function editItem(index: number) {
           <el-input v-model="tripDetailForm.remark" type="textarea" placeholder="请输入备注" :rows="2" />
         </el-form-item>
       </el-form>
+
       <template #footer>
-        <el-button @click="tripDialogVisible = false">取消</el-button>
-        <el-button type="primary" class="sync-btn" @click="saveTrip">保存</el-button>
+        <template v-if="dialogStep === 'choice'">
+          <el-button @click="closeDialog">取消</el-button>
+        </template>
+        <template v-else>
+          <el-button @click="backToChoice">上一步</el-button>
+          <el-button @click="closeDialog">取消</el-button>
+          <el-button v-if="dialogStep === 'hotel'" type="primary" class="sync-btn" @click="saveHotel">保存</el-button>
+          <el-button v-else-if="dialogStep === 'trip'" type="primary" class="sync-btn" @click="saveTrip">保存</el-button>
+        </template>
       </template>
     </el-dialog>
   </div>
@@ -620,29 +653,25 @@ function editItem(index: number) {
   flex-direction: column;
 }
 
-/* 按钮横向排列 */
-.action-buttons {
-  display: flex;
-  gap: 10px;
-}
-
+/* 合并后的添加按钮 */
 .action-btn {
-  flex: 1;
-  height: 44px;
+  width: 100%;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 13px;
-  border-radius: 6px;
-  background: rgb(130, 189, 164);
+  gap: 8px;
+  font-size: 14px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgb(130, 189, 164) 0%, rgb(150, 209, 184) 100%);
   border-color: rgb(130, 189, 164);
   color: #fff;
+  font-weight: 500;
 }
 
 .action-btn:hover {
-  background: rgb(150, 209, 184);
-  border-color: rgb(150, 209, 184);
+  background: linear-gradient(135deg, rgb(110, 169, 144) 0%, rgb(130, 189, 164) 100%);
+  border-color: rgb(110, 169, 144);
   color: #fff;
 }
 
@@ -827,5 +856,49 @@ function editItem(index: number) {
 .sync-btn:hover {
   background: rgb(150, 209, 184) !important;
   border-color: rgb(150, 209, 184) !important;
+}
+
+/* 类型选择 */
+.type-choice {
+  display: flex;
+  gap: 16px;
+}
+
+.type-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border-radius: 8px;
+  border: 1.5px solid #E5E6EB;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.type-card:hover {
+  border-color: rgb(130, 189, 164);
+  background: rgba(130, 189, 164, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(130, 189, 164, 0.15);
+}
+
+.type-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.type-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.type-desc {
+  font-size: 12px;
+  color: #909399;
 }
 </style>

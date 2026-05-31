@@ -47,6 +47,7 @@ export interface MockTrip {
   startTime: string
   endTime: string
   status: 'ongoing' | 'upcoming' | 'finished' | 'conflict'
+  assistants?: { name: string; email: string; phone?: string }[]
 }
 
 // 生成相对日期
@@ -57,16 +58,16 @@ function getRelativeDate(daysOffset: number): string {
 }
 
 export const trips: MockTrip[] = [
-  { id: 'T001', empId: 'E001', city: '北京', tripType: 'domestic', startTime: getRelativeDate(-2), endTime: getRelativeDate(1), status: 'ongoing' },
-  { id: 'T002', empId: 'E002', city: '东京', tripType: 'overseas', startTime: getRelativeDate(-5), endTime: getRelativeDate(5), status: 'ongoing' },
-  { id: 'T003', empId: 'E003', city: '上海', tripType: 'domestic', startTime: getRelativeDate(-1), endTime: getRelativeDate(1), status: 'ongoing' },
+  { id: 'T001', empId: 'E001', city: '北京', tripType: 'domestic', startTime: getRelativeDate(-2), endTime: getRelativeDate(1), status: 'ongoing', assistants: [{ name: '李明', email: 'liming@example.com', phone: '138-1234-5678' }, { name: '王芳', email: 'wangfang@example.com', phone: '139-8765-4321' }] },
+  { id: 'T002', empId: 'E002', city: '东京', tripType: 'overseas', startTime: getRelativeDate(-5), endTime: getRelativeDate(5), status: 'ongoing', assistants: [{ name: '田中太郎', email: 'tanaka@example.com', phone: '+81-90-1234-5678' }] },
+  { id: 'T003', empId: 'E003', city: '上海', tripType: 'domestic', startTime: getRelativeDate(-1), endTime: getRelativeDate(1), status: 'ongoing', assistants: [{ name: '张华', email: 'zhanghua@example.com', phone: '137-1111-2222' }] },
   { id: 'T004', empId: 'E004', city: '深圳', tripType: 'domestic', startTime: getRelativeDate(1), endTime: getRelativeDate(4), status: 'upcoming' },
-  { id: 'T005', empId: 'E005', city: '新加坡', tripType: 'overseas', startTime: getRelativeDate(-6), endTime: getRelativeDate(2), status: 'ongoing' },
+  { id: 'T005', empId: 'E005', city: '新加坡', tripType: 'overseas', startTime: getRelativeDate(-6), endTime: getRelativeDate(2), status: 'ongoing', assistants: [{ name: '陈小明', email: 'chenxiaoming@example.com', phone: '+65-8123-4567' }] },
   { id: 'T006', empId: 'E006', city: '广州', tripType: 'domestic', startTime: getRelativeDate(-11), endTime: getRelativeDate(-8), status: 'finished' },
-  { id: 'T007', empId: 'E007', city: '旧金山', tripType: 'overseas', startTime: getRelativeDate(-4), endTime: getRelativeDate(6), status: 'ongoing' },
-  { id: 'T008', empId: 'E008', city: '成都', tripType: 'domestic', startTime: getRelativeDate(-1), endTime: getRelativeDate(2), status: 'ongoing' },
+  { id: 'T007', empId: 'E007', city: '旧金山', tripType: 'overseas', startTime: getRelativeDate(-4), endTime: getRelativeDate(6), status: 'ongoing', assistants: [{ name: 'Mike Johnson', email: 'mike.j@example.com', phone: '+1-415-555-0100' }, { name: 'Sarah Lee', email: 'sarah.lee@example.com', phone: '+1-650-555-0200' }] },
+  { id: 'T008', empId: 'E008', city: '成都', tripType: 'domestic', startTime: getRelativeDate(-1), endTime: getRelativeDate(2), status: 'ongoing', assistants: [{ name: '刘洋', email: 'liuyang@example.com', phone: '136-9999-8888' }] },
   { id: 'T009', empId: 'E009', city: '香港', tripType: 'overseas', startTime: getRelativeDate(3), endTime: getRelativeDate(8), status: 'upcoming' },
   { id: 'T010', empId: 'E010', city: '杭州', tripType: 'domestic', startTime: getRelativeDate(-2), endTime: getRelativeDate(-1), status: 'ongoing' },
-  { id: 'T011', empId: 'E001', city: '上海', tripType: 'domestic', startTime: getRelativeDate(10), endTime: getRelativeDate(13), status: 'upcoming' },
+  { id: 'T011', empId: 'E001', city: '上海', tripType: 'domestic', startTime: getRelativeDate(10), endTime: getRelativeDate(13), status: 'upcoming', assistants: [{ name: '赵敏', email: 'zhaomin@example.com', phone: '135-5555-6666' }] },
   { id: 'T012', empId: 'E003', city: '武汉', tripType: 'domestic', startTime: getRelativeDate(2), endTime: getRelativeDate(4), status: 'conflict' },
 ]

@@ -48,6 +48,15 @@ export interface TripItem {
   status: TripStatus
   // 每天的明细（从接口获取）
   dayItems?: DayLocationItem[]
+  // 助理列表
+  assistants?: Assistant[]
+}
+
+// 助理
+export interface Assistant {
+  name: string
+  email: string
+  phone?: string
 }
 
 

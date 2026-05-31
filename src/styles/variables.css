@@ -1,4 +1,8 @@
 :root {
+  /* 字体 */
+  --font-sans: 'Noto Sans SC', 'Noto Sans JP', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', Monaco, Consolas, monospace;
+
   /* 主色 */
   --color-primary: rgb(130, 189, 164);
   --color-primary-dark: rgb(110, 169, 144);

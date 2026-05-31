@@ -502,9 +502,18 @@ function goToToday() {
         :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
       >
         <div class="tooltip-city">{{ tooltip.trip.city }}</div>
-        <div class="tooltip-name">{{ tooltip.trip.empName }}</div>
-        <div class="tooltip-date">
-          {{ dayjs(tooltip.trip.startTime).format('MM/DD') }} ~ {{ dayjs(tooltip.trip.endTime).format('MM/DD') }}
+        <div class="tooltip-name">{{ tooltip.trip.empName }} <span class="tooltip-date">{{ dayjs(tooltip.trip.startTime).format('MM/DD') }}~{{ dayjs(tooltip.trip.endTime).format('MM/DD') }}</span></div>
+        <div v-if="tooltip.trip.assistants && tooltip.trip.assistants.length > 0" class="tooltip-assistants">
+          <span
+            v-for="(asst, idx) in tooltip.trip.assistants"
+            :key="idx"
+            class="assist-item"
+          >
+            <a v-if="asst.email" :href="'mailto:' + asst.email" class="assist-name" @click.stop>{{ asst.name }}</a>
+            <span v-else class="assist-name">{{ asst.name }}</span>
+            <a v-if="asst.phone" :href="'tel:' + asst.phone" class="assist-phone" @click.stop>📞</a>
+            <span v-if="idx < tooltip.trip.assistants.length - 1" class="assist-sep">·</span>
+          </span>
         </div>
         <div class="tooltip-status" :class="tooltip.trip.status">
           {{ TRIP_STATUS_LABELS[tooltip.trip.status] }}
@@ -552,6 +561,35 @@ function goToToday() {
                   {{ TRIP_STATUS_LABELS[trip.status] }}
                 </el-tag>
               </div>
+
+              <!-- 助理信息（行程下方） -->
+              <div v-if="trip.assistants && trip.assistants.length > 0" class="trip-assistants-row">
+                <span class="assist-label">助理：</span>
+                <span
+                  v-for="(asst, idx) in trip.assistants"
+                  :key="idx"
+                  class="assist-item"
+                >
+                  <a
+                    v-if="asst.email"
+                    :href="'mailto:' + asst.email"
+                    class="assist-name"
+                    :title="asst.email"
+                    @click.stop
+                  >{{ asst.name }}</a>
+                  <span v-else class="assist-name">{{ asst.name }}</span>
+                  <a
+                    v-if="asst.phone"
+                    :href="'tel:' + asst.phone"
+                    class="assist-phone"
+                    title="拨打电话"
+                    @click.stop
+                  >📞</a>
+                  <span v-if="idx < trip.assistants.length - 1" class="assist-sep">、</span>
+                </span>
+              </div>
+
+              <!-- 每日时间线 -->
 
               <!-- 每日时间线 -->
               <div v-if="trip.dayItems && trip.dayItems.length > 0" class="trip-timeline">
@@ -1016,13 +1054,50 @@ function goToToday() {
   font-size: 13px;
   font-weight: 600;
   color: #303133;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .tooltip-name {
   font-size: 12px;
   color: #606266;
   margin-bottom: 4px;
+}
+
+.tooltip-name .tooltip-date {
+  font-size: 11px;
+  color: #909399;
+  margin-left: 6px;
+}
+
+.tooltip-assistants {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: 11px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.tooltip-assistants .assist-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-assistants .assist-name {
+  color: #409EFF;
+  text-decoration: none;
+}
+
+.tooltip-assistants .assist-phone {
+  color: #67C23A;
+  text-decoration: none;
+  margin-left: 2px;
+}
+
+.tooltip-assistants .assist-sep {
+  color: #C0C4CC;
+  margin: 0 3px;
 }
 
 .tooltip-date {
@@ -1168,6 +1243,67 @@ function goToToday() {
 .trip-card-range {
   font-size: 11px;
   color: #909399;
+}
+
+/* 助理信息（行程下方，独立一行） */
+.trip-assistants-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding: 4px 0;
+  border-top: 1px dashed #E8E8E8;
+  font-size: 12px;
+}
+
+.assist-label {
+  color: #909399;
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.assist-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.assist-link {
+  color: #409EFF;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.assist-link:hover {
+  color: #66B1FF;
+  text-decoration: underline;
+}
+
+.assist-name {
+  color: #409EFF;
+  text-decoration: none;
+}
+
+.assist-name:hover {
+  text-decoration: underline;
+}
+
+.assist-phone {
+  color: #67C23A;
+  text-decoration: none;
+  margin-left: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.assist-phone:hover {
+  opacity: 0.8;
+}
+
+.assist-sep {
+  color: #C0C4CC;
+  margin: 0 2px;
 }
 
 /* 时间线 */
