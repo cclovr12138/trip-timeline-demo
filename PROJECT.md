@@ -38,12 +38,17 @@
 trip-timeline-demo/
 ├── src/
 │   ├── components/
-│   │   └── timeline/          # Timeline 相关组件
-│   ├── stores/                # Pinia 状态管理
-│   ├── views/                 # 页面视图
-│   └── ...
-├── dist/                      # 构建输出目录
-├── Dockerfile                 # Docker 部署配置
+│   │   ├── timeline/      # Timeline 核心组件
+│   │   ├── trip/          # 添加行程页面（AddTripView）
+│   │   ├── filters/       # 筛选器
+│   │   ├── statistics/    # 统计卡片
+│   │   └── layout/        # 布局组件
+│   ├── stores/            # Pinia 状态管理
+│   ├── views/             # 页面视图
+│   ├── api/              # API 请求
+│   └── types/             # TypeScript 类型
+├── .gitignore            # 已配置（排除 dist/、node_modules/）
+├── Dockerfile             # Docker 部署配置
 ├── package.json
 ├── vite.config.ts
 └── tsconfig.json
@@ -107,9 +112,34 @@ trip-timeline-demo/
 **当前状态**：✅ 已构建并部署到 https://timeline.cclovr.top
 
 **待办**：
-- [ ] 验证时间范围筛选是否生效
-- [ ] 验证周/月视图日期对齐
-- [ ] 验证"今天"按钮定位到当前日期
+- [x] 时间范围筛选
+- [x] 周/月视图日期对齐
+- [x] "今天"按钮定位
+
+### 2026-05-31 - 添加行程页面按钮合并
+
+**需求**：把「添加酒店信息」和「添加行程信息」两个按钮合并为一个，点击后弹窗先选择类型再切换到对应表单
+
+**已完成修改**：
+
+1. **AddTripView.vue** - 合并按钮：
+   - 两个按钮合并为一个大按钮，文字「添加行程信息」
+   - 弹窗 `dialogStep` 三步流程：`choice` → `hotel` | `trip`
+   - choice 步骤显示两个大卡片（🏨 添加酒店 / ✈️ 添加行程）
+   - 选择后切换到对应表单，底部有「上一步」可返回重新选择
+   - 时间线编辑按钮仍可直接打开对应类型弹窗
+
+2. **Git 操作教训**：
+   - 项目初始化时必须创建 `.gitignore`
+   - 不要使用 `git add .`，改用 `git add src/` 或具体文件
+   - 构建产物由 CI/CD 负责，不进仓库（使用 `git filter-branch` 从历史中移除）
+   - 使用 SSH Key push（ClashX HTTP 代理会导致卡死）
+
+3. **Docker 部署修复**：
+   - `timeline` 容器需连接到 `trip-network` 才能被 Cloudflare Tunnel 访问
+   - 命令：`docker network connect trip-network timeline`
+
+**当前状态**：✅ 已部署到 https://timeline.cclovr.top
 
 ---
 
@@ -117,9 +147,10 @@ trip-timeline-demo/
 
 | 文档 | 路径 |
 |------|------|
-| 日志 | `memory/2026-05-26.md` |
+| 项目记录 | `memory/PJ-企业出差行程管理系统.md` |
+| 每日记录 | `memory/2026-05-31.md` |
 | MEMORY | `MEMORY.md` |
 
 ---
 
-*最后更新：2026-05-27*
+*最后更新：2026-05-31*
