@@ -100,3 +100,68 @@ export function calculateTripBlock(
     width: duration * dayWidth,
   }
 }
+
+// ============================================
+// 周始日相关工具（支持周日/周一自由切换）
+// ============================================
+
+/** 周始日类型：0=周日, 1=周一 */
+export type WeekStartDay = 0 | 1
+
+/**
+ * 将日期向前递补到周始日（包含自身若是周始日）
+ * @param date YYYY-MM-DD 或 Date 或 Dayjs
+ * @param weekStartDay 0=周日 1=周一
+ */
+export function getWeekStart(
+  date: string | Date | dayjs.Dayjs,
+  weekStartDay: WeekStartDay = 0
+): dayjs.Dayjs {
+  const d = dayjs(date)
+  const dow = d.day() // 0=Sun..6=Sat
+  const diff = (dow - weekStartDay + 7) % 7
+  return d.subtract(diff, 'day')
+}
+
+/**
+ * 将日期向后递补到一周最后一天（包含自身若是周末）
+ */
+export function getWeekEnd(
+  date: string | Date | dayjs.Dayjs,
+  weekStartDay: WeekStartDay = 0
+): dayjs.Dayjs {
+  return getWeekStart(date, weekStartDay).add(6, 'day')
+}
+
+/**
+ * 计算从 start 到 end 之间（按周对齐）共有多少个周始日
+ * 即把两端都对齐到周后，总天数 / 7
+ */
+export function getAlignedWeekCount(
+  start: string | Date | dayjs.Dayjs,
+  end: string | Date | dayjs.Dayjs,
+  weekStartDay: WeekStartDay = 0
+): number {
+  const alignedStart = getWeekStart(start, weekStartDay)
+  const alignedEnd = getWeekEnd(end, weekStartDay)
+  return Math.floor(alignedEnd.diff(alignedStart, 'day') / 7) + 1
+}
+
+/**
+ * 生成 [start, end] 区间内所有周一的日期列表（仅周始日）
+ */
+export function listWeekStartDays(
+  start: string | Date | dayjs.Dayjs,
+  end: string | Date | dayjs.Dayjs,
+  weekStartDay: WeekStartDay = 0
+): string[] {
+  const alignedStart = getWeekStart(start, weekStartDay)
+  const alignedEnd = getWeekEnd(end, weekStartDay)
+  const result: string[] = []
+  let cur = alignedStart.clone()
+  while (cur.isBefore(alignedEnd) || cur.isSame(alignedEnd, 'day')) {
+    result.push(cur.format('YYYY-MM-DD'))
+    cur = cur.add(7, 'day')
+  }
+  return result
+}

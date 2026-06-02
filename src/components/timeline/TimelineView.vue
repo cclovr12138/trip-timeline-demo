@@ -7,6 +7,12 @@ import { TRIP_STATUS_LABELS, TRANSPORT_ICONS, TRANSPORT_COLORS } from '@/types'
 import { getEmployeeDailyLocation, enrichTripsWithDayItems } from '@/mock/locations'
 import TimelineRow from './TimelineRow.vue'
 import FilterPanel from '@/components/filters/FilterPanel.vue'
+import {
+  getWeekStart,
+  getWeekEnd,
+  getAlignedWeekCount,
+  type WeekStartDay,
+} from '@/utils/date'
 
 const store = useTripStore()
 
@@ -78,7 +84,7 @@ function handleDrawerClose() {
 const dataDateRange = computed(() => {
   let earliest = ''
   let latest = ''
-  
+
   for (const row of store.allTimelineData) {
     for (const trip of row.trips) {
       if (!earliest || trip.startTime < earliest) {
@@ -89,139 +95,172 @@ const dataDateRange = computed(() => {
       }
     }
   }
-  
+
   if (!earliest || !latest) {
+    // 无数据时默认取当前周
     const now = dayjs()
-    earliest = now.startOf('week').format('YYYY-MM-DD')
-    latest = now.endOf('week').format('YYYY-MM-DD')
+    return {
+      start: now.startOf('week').format('YYYY-MM-DD'),
+      end: now.endOf('week').format('YYYY-MM-DD'),
+    }
   }
-  
+
   return { start: earliest, end: latest }
 })
 
-// 根据视图模式计算日期范围和第一层分组
-const dateRangeInfo = computed(() => {
-  // 优先使用筛选器的时间范围，否则用数据的时间范围
-  let rangeStart: dayjs.Dayjs
-  let rangeEnd: dayjs.Dayjs
-  
-  if (filterParams.value.dateRange && filterParams.value.dateRange.length === 2) {
-    rangeStart = dayjs(filterParams.value.dateRange[0])
-    rangeEnd = dayjs(filterParams.value.dateRange[1])
-  } else {
-    const { start, end } = dataDateRange.value
-    rangeStart = dayjs(start)
-    rangeEnd = dayjs(end)
-  }
-  
-  // 扩展边界以对齐周/月视图
-  switch (store.viewMode) {
-    case 'day':
-      // 日视图不扩展
-      break
-    case 'week':
-      // 周视图对齐到周开始/结束
-      rangeStart = rangeStart.startOf('week')
-      rangeEnd = rangeEnd.endOf('week')
-      break
-    case 'month':
-      // 月视图对齐到月开始/结束
-      rangeStart = rangeStart.startOf('month')
-      rangeEnd = rangeEnd.endOf('month')
-      break
-  }
-  
-  // 生成日期数组
-  const days = rangeEnd.diff(rangeStart, 'day') + 1
-  const result: string[] = []
-  for (let i = 0; i < days; i++) {
-    result.push(rangeStart.add(i, 'day').format('YYYY-MM-DD'))
-  }
-  
-  // 计算第一层分组（周/月视图）
-  let firstLayerGroups: { title: string; spanDays: number }[] = []
-  
-  if (store.viewMode === 'week') {
-    let cur = rangeStart.clone()
-    while (cur.isBefore(rangeEnd) || cur.isSame(rangeEnd, 'day')) {
-      const weekEnd = cur.endOf('week')
-      const clampedEnd = weekEnd.isAfter(rangeEnd) ? rangeEnd : weekEnd
-      const spanDays = clampedEnd.diff(cur, 'day') + 1
-      
-      firstLayerGroups.push({
-        title: `${cur.format('M月D日')} - ${clampedEnd.format('M月D日')}`,
-        spanDays
-      })
-      
-      cur = cur.add(1, 'week')
+// 周始日（0=周日, 1=周一）—— 从 localStorage 读取，运行时可切换
+const STORAGE_KEY_WEEK_START = 'trip-timeline:weekStartDay'
+const weekStartDay = ref<WeekStartDay>(
+  (() => {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY_WEEK_START)
+      if (v === '0' || v === '1') return Number(v) as WeekStartDay
+    } catch {
+      // 忽略
     }
-  } else if (store.viewMode === 'month') {
-    let curMonth = rangeStart.clone()
-    while (curMonth.isBefore(rangeEnd) || curMonth.isSame(rangeEnd, 'month')) {
-      const monthEnd = curMonth.endOf('month')
-      const clampedEnd = monthEnd.isAfter(rangeEnd) ? rangeEnd : monthEnd
-      const spanDays = clampedEnd.diff(curMonth, 'day') + 1
-      
-      firstLayerGroups.push({
-        title: `${curMonth.format('M月 YYYY年')}`,
-        spanDays
-      })
-      
-      curMonth = curMonth.add(1, 'month')
-    }
+    return 1 // 默认周一
+  })()
+)
+watch(weekStartDay, (v) => {
+  try {
+    localStorage.setItem(STORAGE_KEY_WEEK_START, String(v))
+  } catch {
+    // 忽略
   }
-  
-  return { dates: result, firstLayerGroups }
 })
 
-const dates = computed(() => dateRangeInfo.value.dates)
-const firstLayerGroups = computed(() => dateRangeInfo.value.firstLayerGroups)
+// 中文星期（周几 → 单字）
+const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+
+// 单个日格（第二层）的元信息
+interface DayCell {
+  date: string
+  dayLabel: string
+  dayNum: number
+  isToday: boolean
+  isWeekend: boolean
+  isWeekStartDay: boolean
+}
+
+// 周格（周/月视图第一层，或月视图第二层）
+interface WeekCell {
+  startDate: string
+  endDate: string
+  title: string // mm/dd-mm/dd
+  spanDays: number // 始终为 7
+}
+
+// 月格（仅月视图第一层）
+interface MonthCell {
+  monthKey: string // yyyy-MM
+  title: string // yyyy-MM
+  spanWeeks: number // 该月含几个周
+  startWeekIndex: number // 在 weeks 数组中的起含索引
+  endWeekIndex: number // 不含
+}
+
+// 核心：表头计算（根据 R1/R2/R3 新算法）
+const headerInfo = computed(() => {
+  const { start, end } = dataDateRange.value
+  const dataStart = dayjs(start)
+  const dataEnd = dayjs(end)
+  const wsd = weekStartDay.value
+
+  // 对齐到周
+  const alignedStart = getWeekStart(dataStart, wsd)
+  const alignedEnd = getWeekEnd(dataEnd, wsd)
+  const totalDays = alignedEnd.diff(alignedStart, 'day') + 1
+  const weekCount = getAlignedWeekCount(dataStart, dataEnd, wsd)
+
+  // 日格
+  const days: DayCell[] = []
+  for (let i = 0; i < totalDays; i++) {
+    const d = alignedStart.add(i, 'day')
+    const dow = d.day()
+    days.push({
+      date: d.format('YYYY-MM-DD'),
+      dayLabel: weekdays[dow],
+      dayNum: d.date(),
+      isToday: d.isSame(dayjs(), 'day'),
+      isWeekend: dow === 0 || dow === 6,
+      isWeekStartDay: dow === wsd,
+    })
+  }
+
+  // 周格
+  const weeks: WeekCell[] = []
+  for (let i = 0; i < weekCount; i++) {
+    const wStart = alignedStart.add(i * 7, 'day')
+    const wEnd = wStart.add(6, 'day')
+    weeks.push({
+      startDate: wStart.format('YYYY-MM-DD'),
+      endDate: wEnd.format('YYYY-MM-DD'),
+      title: `${wStart.format('MM/DD')}-${wEnd.format('MM/DD')}`,
+      spanDays: 7,
+    })
+  }
+
+  // 月格（按周所在的 yyyy-MM 分组）
+  const months: MonthCell[] = []
+  if (weeks.length > 0) {
+    let curKey = dayjs(weeks[0].startDate).format('YYYY-MM')
+    let startIdx = 0
+    for (let i = 0; i < weeks.length; i++) {
+      const k = dayjs(weeks[i].startDate).format('YYYY-MM')
+      if (k !== curKey) {
+        months.push({
+          monthKey: curKey,
+          title: curKey, // yyyy-MM
+          spanWeeks: i - startIdx,
+          startWeekIndex: startIdx,
+          endWeekIndex: i,
+        })
+        curKey = k
+        startIdx = i
+      }
+    }
+    months.push({
+      monthKey: curKey,
+      title: curKey,
+      spanWeeks: weeks.length - startIdx,
+      startWeekIndex: startIdx,
+      endWeekIndex: weeks.length,
+    })
+  }
+
+  return { alignedStart, alignedEnd, days, weeks, months }
+})
+
+const dates = computed(() => headerInfo.value.days.map((d) => d.date))
+const firstLayerGroups = computed(() => headerInfo.value.weeks) // 周视图第一层 = weeks
+const monthGroups = computed(() => headerInfo.value.months) // 月视图第一层
+const headerLabels = computed(() => headerInfo.value.days)
 
 const dateRangeStart = computed(() => dates.value[0] || '')
 
-// 引用 filterParams
-const filterParams = computed(() => store.filterParams)
-
-// 固定天数宽度，不随视图变化
+// 单个日格的逻辑宽度（用于 header layer2 与 body 同一基线）
 const dayWidth = 80
+// 周格宽度（layer1 周）= 7 * dayWidth；月视图下压缩为 2 * dayWidth
+const weekWidth = computed(() =>
+  store.viewMode === 'month' ? 2 * dayWidth : 7 * dayWidth
+)
+// 月格宽度（layer1 月）= 该月含周数 * weekWidth
+const monthWidthOf = (m: MonthCell) => m.spanWeeks * weekWidth.value
 
-const totalWidth = computed(() => dates.value.length * dayWidth)
-
-// 中文星期
-const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-
-// 表头标签
-const headerLabels = computed(() => {
-  return dates.value.map(date => {
-    const d = new Date(date)
-    return {
-      label: weekdays[d.getDay()],
-      day: d.getDate(),
-      isToday: dayjs(date).isSame(dayjs(), 'day'),
-      isWeekend: d.getDay() === 0 || d.getDay() === 6
-    }
-  })
+// body 中每一天的渲染宽度（保持 header/body 滚动同步）
+const bodyDayWidth = computed(() => {
+  if (store.viewMode === 'month') {
+    return (2 * dayWidth) / 7
+  }
+  return dayWidth
 })
 
-// 第一层标题
-const headerTitle = computed(() => {
-  const first = dayjs(dates.value[0])
-  const last = dayjs(dates.value[dates.value.length - 1])
-  return `${first.format('M月D日')} - ${last.format('M月D日')}`
-})
+// body 总宽度 = dates.length * bodyDayWidth（与 header layer1 总宽一致）
+const totalWidth = computed(() => dates.value.length * bodyDayWidth.value)
 
-// 是否有第一层
+// 表头总高度：日视图 40px；周/月视图 80px
+const headerTotalHeight = computed(() => (store.viewMode === 'day' ? 40 : 80))
 const hasFirstLayer = computed(() => store.viewMode !== 'day')
-
-// 员工列头高度 - 与表头总高度一致
-const employeeHeaderHeight = computed(() => {
-  return hasFirstLayer.value ? 80 : 40
-})
-
-// 表头总高度
-const headerTotalHeight = computed(() => {
-  return hasFirstLayer.value ? 80 : 40
-})
 
 // 每一行的高度
 const rowHeight = 40
@@ -347,7 +386,15 @@ function goToToday() {
       
       <div class="toolbar-right">
         <button type="button" class="today-btn el-button el-button--primary el-button--small" @click.stop="goToToday">今天</button>
-        
+
+        <div class="weekstart-switch">
+          <span class="weekstart-label">周始日</span>
+          <el-radio-group v-model="weekStartDay" size="small">
+            <el-radio-button :value="1">周一</el-radio-button>
+            <el-radio-button :value="0">周日</el-radio-button>
+          </el-radio-group>
+        </div>
+
         <el-radio-group v-model="store.viewMode" size="small">
           <el-radio-button value="day">日</el-radio-button>
           <el-radio-button value="week">周</el-radio-button>
@@ -409,9 +456,9 @@ function goToToday() {
           :style="{ height: headerTotalHeight + 'px' }"
           @scroll="onHeaderScroll"
         >
-          <!-- 日视图：只有一行 -->
+          <!-- =========== 日视图：单层表头 =========== -->
           <template v-if="store.viewMode === 'day'">
-            <div 
+            <div
               class="header-row header-single"
               :style="{ width: totalWidth + 'px', height: '40px' }"
             >
@@ -422,34 +469,35 @@ function goToToday() {
                 :class="{
                   'is-today': cell.isToday,
                   'is-weekend': cell.isWeekend,
+                  'is-week-start': cell.isWeekStartDay,
                 }"
                 :style="{ width: dayWidth + 'px', height: '40px' }"
               >
-                <span class="day-label">周{{ cell.label }}</span>
-                <span class="day-num">{{ cell.day }}</span>
+                <span class="day-label">周{{ cell.dayLabel }}</span>
+                <span class="day-num">{{ cell.dayNum }}</span>
               </div>
             </div>
           </template>
-          
-          <!-- 周/月视图：两行 -->
-          <template v-else>
-            <!-- 第一行：分组标题 -->
-            <div 
+
+          <!-- =========== 周视图：双层表头（周 + 日） =========== -->
+          <template v-else-if="store.viewMode === 'week'">
+            <!-- Layer 1：一周一个 cell（mm/dd-mm/dd），宽度 = 7 * dayWidth -->
+            <div
               class="header-row header-title"
               :style="{ width: totalWidth + 'px', height: '40px' }"
             >
               <div
-                v-for="(group, index) in firstLayerGroups"
-                :key="index"
+                v-for="(w, idx) in firstLayerGroups"
+                :key="'w-' + idx"
                 class="header-title-cell"
-                :style="{ width: (group.spanDays * dayWidth) + 'px', height: '40px' }"
+                :style="{ width: (7 * dayWidth) + 'px', height: '40px' }"
               >
-                {{ group.title }}
+                {{ w.title }}
               </div>
             </div>
-            
-            <!-- 第二行：星期+日期 -->
-            <div 
+
+            <!-- Layer 2：每个 day 一个 cell -->
+            <div
               class="header-row header-weekday"
               :style="{ width: totalWidth + 'px', height: '40px' }"
             >
@@ -460,11 +508,45 @@ function goToToday() {
                 :class="{
                   'is-today': cell.isToday,
                   'is-weekend': cell.isWeekend,
+                  'is-week-start': cell.isWeekStartDay,
                 }"
                 :style="{ width: dayWidth + 'px', height: '40px' }"
               >
-                <span class="day-label">周{{ cell.label }}</span>
-                <span class="day-num">{{ cell.day }}</span>
+                <span class="day-label">周{{ cell.dayLabel }}</span>
+                <span class="day-num">{{ cell.dayNum }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- =========== 月视图：双层表头（月 + 周） =========== -->
+          <template v-else>
+            <!-- Layer 1：每个自然月一个 cell（yyyy-MM），宽度 = 该月含周数 * weekWidth -->
+            <div
+              class="header-row header-title"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(m, idx) in monthGroups"
+                :key="'m-' + idx"
+                class="header-title-cell"
+                :style="{ width: monthWidthOf(m) + 'px', height: '40px' }"
+              >
+                {{ m.title }}
+              </div>
+            </div>
+
+            <!-- Layer 2：每个周一个 cell（mm/dd-mm/dd），宽度 = 2 * dayWidth -->
+            <div
+              class="header-row header-weekday"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(w, idx) in firstLayerGroups"
+                :key="'mw-' + idx"
+                class="header-cell header-cell--week"
+                :style="{ width: weekWidth + 'px', height: '40px' }"
+              >
+                <span class="week-label">{{ w.title }}</span>
               </div>
             </div>
           </template>
@@ -480,7 +562,7 @@ function goToToday() {
                 :row="row"
                 :dates="dates"
                 :range-start="dateRangeStart"
-                :day-width="dayWidth"
+                :day-width="bodyDayWidth"
                 :row-height="rowHeight"
                 :hovered-emp-id="hoveredEmpId"
                 @trip-hover="handleTripHover"
@@ -981,6 +1063,39 @@ function goToToday() {
 
 .header-cell.is-weekend .day-label {
   color: #909399;
+}
+
+/* 周始日格：左边用小竖线标记（不干涉原有背景） */
+.header-cell.is-week-start {
+  border-left: 1px solid #C0C4CC;
+}
+
+/* 月视图下的周格（Layer 2） */
+.header-cell--week {
+  background: #F5F7FA;
+}
+
+.header-cell--week .week-label {
+  font-size: 11px;
+  color: #606266;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 周始日 switch 样式 */
+.weekstart-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-left: 1px solid #E5E6EB;
+  border-right: 1px solid #E5E6EB;
+}
+
+.weekstart-label {
+  font-size: 12px;
+  color: #606266;
+  white-space: nowrap;
 }
 
 .day-label {
