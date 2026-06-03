@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import dayjs from 'dayjs'
 import type { TimelineRow as TimelineRowType, TripItem } from '@/types'
 import { getDateOffset } from '@/utils/date'
 
@@ -43,9 +44,13 @@ const visibleTrips = computed(() => {
 })
 
 function getTripColor(trip: TripItem): string {
-  if (trip.status === 'ongoing') return '#67C23A'
-  if (trip.status === 'upcoming') return '#E6A23C'
-  return '#909399'
+  // 根据当前日期动态计算状态
+  const now = dayjs()
+  const end = dayjs(trip.endTime)
+  const start = dayjs(trip.startTime)
+  if (end.isBefore(now, 'day')) return '#909399' // 已结束
+  if (end.isAfter(now, 'day') && start.isBefore(now, 'day')) return '#67C23A' // 进行中
+  return '#E6A23C' // 即将出发
 }
 
 function getTripBgColor(trip: TripItem): string {
@@ -119,7 +124,7 @@ const todayColumnStyle = computed(() => {
   bottom: 0;
   pointer-events: none;
   z-index: 0;
-  background: rgba(255, 100, 100, 0.08);
+  background: rgba(255, 100, 100, 0.18);
 }
 
 .trip-block {
