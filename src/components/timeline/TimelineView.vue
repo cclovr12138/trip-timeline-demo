@@ -450,9 +450,9 @@ function goToToday() {
         </div>
       </div>
 
-      <!-- 右侧时间轴（可滚动） -->
+      <!-- 右侧时间轴 -->
       <div class="timeline-content">
-        <!-- 表头（可滚动） -->
+        <!-- 表头（与 body 平级，sticky 相对 .timeline-body 吸顶） -->
         <div 
           ref="headerScrollRef"
           class="timeline-header"
@@ -485,7 +485,6 @@ function goToToday() {
 
           <!-- =========== 周视图：双层表头（周 + 日） =========== -->
           <template v-else-if="store.viewMode === 'week'">
-            <!-- Layer 1：一周一个 cell（mm/dd-mm/dd），宽度 = 7 * dayWidth -->
             <div
               class="header-row header-title"
               :style="{ width: totalWidth + 'px', height: '40px' }"
@@ -499,8 +498,6 @@ function goToToday() {
                 {{ w.title }}
               </div>
             </div>
-
-            <!-- Layer 2：每个 day 一个 cell -->
             <div
               class="header-row header-weekday"
               :style="{ width: totalWidth + 'px', height: '40px' }"
@@ -524,7 +521,6 @@ function goToToday() {
 
           <!-- =========== 月视图：双层表头（月 + 周） =========== -->
           <template v-else>
-            <!-- Layer 1：每个自然月一个 cell（yyyy-MM），宽度 = 该月含周数 * weekWidth -->
             <div
               class="header-row header-title"
               :style="{ width: totalWidth + 'px', height: '40px' }"
@@ -538,8 +534,6 @@ function goToToday() {
                 {{ m.title }}
               </div>
             </div>
-
-            <!-- Layer 2：每个周一个 cell（mm/dd-mm/dd），宽度 = 2 * dayWidth -->
             <div
               class="header-row header-weekday"
               :style="{ width: totalWidth + 'px', height: '40px' }"
@@ -555,7 +549,7 @@ function goToToday() {
             </div>
           </template>
         </div>
-        
+
         <!-- 表体 -->
         <div ref="bodyScrollRef" class="timeline-body" @scroll="onBodyScroll">
           <div class="timeline-body-inner" :style="{ width: totalWidth + 'px' }">
@@ -869,6 +863,7 @@ function goToToday() {
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* 左侧员工列 */
@@ -987,23 +982,27 @@ function goToToday() {
   font-size: 12px;
 }
 
-/* 右侧时间轴 */
+/* 右侧时间轴（总容器） */
 .timeline-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  min-width: 0;
 }
 
-/* 表头 */
+/* 表头本身（sticky 吸顶） */
 .timeline-header {
   display: flex;
   flex-direction: column;
   background: #F5F7FA;
-  border-bottom: 1px solid #E5E6EB;
-  flex-shrink: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .timeline-header::-webkit-scrollbar {
@@ -1119,6 +1118,7 @@ function goToToday() {
 .timeline-body {
   flex: 1;
   overflow: auto;
+  min-height: 0;
 }
 
 .timeline-body::-webkit-scrollbar {

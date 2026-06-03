@@ -176,6 +176,9 @@ function resetFilters() {
 
 <style scoped>
 .filter-panel {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   padding: 12px 24px;
   background: white;
   border-radius: 8px;

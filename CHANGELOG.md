@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed
+- **Timeline 布局调整**：`.app-main` 恢复 `overflow-y: auto`，`.timeline-main` 加 `min-height: 0`
+- **表头吸顶**：将 `.timeline-header` 从 `.timeline-body` 内部移出，与 body 平级（解决 sticky 的"最近滚动祖先"为自己导致失效的问题）；表头加 `flex-shrink: 0`
+
 ### Added
 - **员工数据扩展**：从 10 人扩展到 50 人（E001-E050），覆盖技术/市场/销售/产品/财务/人力资源各部门
 - **Mock 行程数据扩展**：从 12 条扩展到 60 条，覆盖国内外多个城市和日期范围
