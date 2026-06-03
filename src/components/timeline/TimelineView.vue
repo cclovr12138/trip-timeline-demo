@@ -312,6 +312,10 @@ function handleTripHover(trip: TripItem, event: MouseEvent) {
   }
 }
 
+// 今天所在列的索引（用于表体高亮）
+const today = dayjs().format('YYYY-MM-DD')
+const todayIndex = computed(() => dates.value.indexOf(today))
+
 function handleTripLeave() {
   tooltip.value.visible = false
 }
@@ -565,6 +569,7 @@ function goToToday() {
                 :day-width="bodyDayWidth"
                 :row-height="rowHeight"
                 :hovered-emp-id="hoveredEmpId"
+                :today-index="todayIndex"
                 @trip-hover="handleTripHover"
                 @trip-leave="handleTripLeave"
               />

@@ -10,6 +10,7 @@ interface Props {
   dayWidth: number
   rowHeight: number
   hoveredEmpId: string | null
+  todayIndex: number
 }
 
 const props = defineProps<Props>()
@@ -63,10 +64,23 @@ function handleMouseEnter(trip: TripItem, event: MouseEvent) {
 function handleMouseLeave() {
   emit('trip-leave')
 }
+
+// 今天列背景样式（透明淡红）
+const todayColumnStyle = computed(() => {
+  if (props.todayIndex < 0) return null
+  return {
+    left: (props.todayIndex * props.dayWidth) + 'px',
+    width: props.dayWidth + 'px',
+    backgroundColor: 'rgba(255, 100, 100, 0.08)',
+  }
+})
+
 </script>
 
 <template>
   <div class="timeline-row" :class="{ 'is-hovered': row.empId === hoveredEmpId }" :style="{ height: rowHeight + 'px' }">
+    <!-- 今天列背景（透明淡红） -->
+    <div v-if="todayIndex >= 0" class="today-col-bg" :style="todayColumnStyle" />
     <div
       v-for="item in visibleTrips"
       :key="item.trip.id"
@@ -97,6 +111,15 @@ function handleMouseLeave() {
 
 .timeline-row:hover {
   background: #FAFCFF;
+}
+
+.today-col-bg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: rgba(255, 100, 100, 0.08);
 }
 
 .trip-block {
