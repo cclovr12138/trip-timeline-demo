@@ -469,7 +469,7 @@ function goToToday() {
                 :class="{
                   'is-today': cell.isToday,
                   'is-weekend': cell.isWeekend,
-                  'is-week-start': cell.isWeekStartDay,
+                  'is-week-start': index !== 0 && cell.isWeekStartDay,
                 }"
                 :style="{ width: dayWidth + 'px', height: '40px' }"
               >
@@ -508,7 +508,7 @@ function goToToday() {
                 :class="{
                   'is-today': cell.isToday,
                   'is-weekend': cell.isWeekend,
-                  'is-week-start': cell.isWeekStartDay,
+                  'is-week-start': index !== 0 && cell.isWeekStartDay,
                 }"
                 :style="{ width: dayWidth + 'px', height: '40px' }"
               >
@@ -1026,7 +1026,7 @@ function goToToday() {
   color: #606266;
   background: #F5F7FA;
   white-space: nowrap;
-  border-right: 1px solid #E5E6EB;
+  border-right: 1px solid #DCDFE6;
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -1037,8 +1037,9 @@ function goToToday() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-right: 1px solid #EBEEF5;
+  border-right: 1px solid #DCDFE6;
   box-sizing: border-box;
+  position: relative;
 }
 
 .header-cell.is-today {
@@ -1065,9 +1066,9 @@ function goToToday() {
   color: #909399;
 }
 
-/* 周始日格：左边用小竖线标记（不干涉原有背景） */
+/* 周始日格：无额外标记 */
 .header-cell.is-week-start {
-  border-left: 1px solid #C0C4CC;
+  /* 保持与普通格一致 */
 }
 
 /* 月视图下的周格（Layer 2） */
