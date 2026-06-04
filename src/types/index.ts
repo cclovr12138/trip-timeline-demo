@@ -17,6 +17,9 @@ export type TripType = 'domestic'
 // 视图模式
 export type ViewMode = 'day' | 'week' | 'month'
 
+// 委托状态
+export type EntrustStatus = 'none' | 'in_progress' | 'completed'
+
 // 附件信息
 export interface AttachmentInfo {
   name: string                 // 文件名
@@ -44,6 +47,7 @@ export interface DayLocationItem {
   managerRemark?: string       // 负责人备注
   managers?: string[]          // 负责人(员工ID列表)
   attachments?: AttachmentInfo[] // 附件列表
+  entrustStatus?: EntrustStatus // 委托状态（仅用背景色体现）
 }
 
 // 行程项
@@ -154,4 +158,18 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
   ongoing: '进行中',
   upcoming: '即将开始',
   finished: '已结束',
+} as const
+
+// 委托状态标签
+export const ENTRUST_STATUS_LABELS: Record<EntrustStatus, string> = {
+  none: '不需要委托',
+  in_progress: '委托进行中',
+  completed: '委托完成',
+} as const
+
+// 委托状态底色（很淡,不喧宾夺主）
+export const ENTRUST_STATUS_BG: Record<EntrustStatus, string> = {
+  none: '#FFFFFF',       // 纯白(默认)
+  in_progress: '#FFFBE6', // 极淡橙黄
+  completed: '#F6FFED',  // 极淡绿
 } as const

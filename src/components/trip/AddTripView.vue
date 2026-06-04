@@ -8,8 +8,11 @@ import {
   TRANSPORT_ICONS,
   TRANSPORT_COLORS,
   TRANSPORT_LABELS,
+  ENTRUST_STATUS_LABELS,
+  ENTRUST_STATUS_BG,
   type DayLocationItem,
   type AttachmentInfo,
+  type EntrustStatus,
 } from '@/types'
 
 const store = useTripStore()
@@ -91,6 +94,7 @@ const hotelForm = ref({
   attachments: [] as AttachmentInfo[],
   remark: '',        // 出差备注
   managerRemark: '', // 负责人备注
+  entrustStatus: 'none' as EntrustStatus,
 })
 
 const tripDetailForm = ref({
@@ -105,6 +109,7 @@ const tripDetailForm = ref({
   attachments: [] as AttachmentInfo[],
   remark: '',
   managerRemark: '',
+  entrustStatus: 'none' as EntrustStatus,
 })
 
 const timeSlots = Array.from({ length: 17 }, (_, i) => {
@@ -236,6 +241,7 @@ function openHotelDialog(date?: string, index?: number) {
         attachments: item.attachments || [],
         remark: item.remark || '',
         managerRemark: item.managerRemark || '',
+        entrustStatus: item.entrustStatus || 'none',
       }
     }
   } else {
@@ -249,6 +255,7 @@ function openHotelDialog(date?: string, index?: number) {
       attachments: [],
       remark: '',
       managerRemark: '',
+      entrustStatus: 'none',
     }
   }
   dialogStep.value = 'hotel'
@@ -273,6 +280,7 @@ function openTripDialog(date?: string, index?: number) {
         attachments: item.attachments || [],
         remark: item.remark || '',
         managerRemark: item.managerRemark || '',
+        entrustStatus: item.entrustStatus || 'none',
       }
     }
   } else {
@@ -288,6 +296,7 @@ function openTripDialog(date?: string, index?: number) {
       attachments: [],
       remark: '',
       managerRemark: '',
+      entrustStatus: 'none',
     }
   }
   dialogStep.value = 'trip'
@@ -349,6 +358,7 @@ function saveHotel() {
     attachments: hotelForm.value.attachments,
     remark: hotelForm.value.remark,
     managerRemark: hotelForm.value.managerRemark,
+    entrustStatus: hotelForm.value.entrustStatus,
   }
   if (editingIndex.value !== null) tripList.value[editingIndex.value] = item
   else tripList.value.push(item)
@@ -378,6 +388,7 @@ function saveTrip() {
     attachments: tripDetailForm.value.attachments,
     remark: tripDetailForm.value.remark,
     managerRemark: tripDetailForm.value.managerRemark,
+    entrustStatus: tripDetailForm.value.entrustStatus,
   }
   if (editingIndex.value !== null) tripList.value[editingIndex.value] = item
   else tripList.value.push(item)
@@ -555,7 +566,11 @@ import { ElMessageBox } from 'element-plus'
                 v-for="(hotel, hi) in day.hotels"
                 :key="`h-${day.date}-${hi}`"
                 class="card hotel-card"
-                :class="{ 'is-editable': editMode }"
+                :class="[
+                  { 'is-editable': editMode },
+                  `entrust-${hotel.entrustStatus || 'none'}`,
+                ]"
+                :style="{ background: ENTRUST_STATUS_BG[hotel.entrustStatus || 'none'] }"
               >
                 <div class="card-title hotel-title">
                   <span class="title-bar" style="background: #67C23A"></span>
@@ -643,8 +658,14 @@ import { ElMessageBox } from 'element-plus'
                 v-for="(trip, ti) in day.trips"
                 :key="`t-${day.date}-${ti}`"
                 class="card trip-card"
-                :class="{ 'is-editable': editMode }"
-                :style="{ borderLeftColor: getItemColor(trip) }"
+                :class="[
+                  { 'is-editable': editMode },
+                  `entrust-${trip.entrustStatus || 'none'}`,
+                ]"
+                :style="{
+                  borderLeftColor: getItemColor(trip),
+                  background: ENTRUST_STATUS_BG[trip.entrustStatus || 'none'],
+                }"
               >
                 <div class="card-title trip-title">
                   <span class="trip-icon">{{ getItemIcon(trip) }}</span>
@@ -759,6 +780,13 @@ import { ElMessageBox } from 'element-plus'
             <el-option v-for="emp in store.allTimelineData" :key="emp.empId" :label="emp.empName" :value="emp.empId" />
           </el-select>
         </el-form-item>
+        <el-form-item label="委托状态">
+          <el-radio-group v-model="hotelForm.entrustStatus" size="small">
+            <el-radio-button value="none">不需要委托</el-radio-button>
+            <el-radio-button value="in_progress">委托进行中</el-radio-button>
+            <el-radio-button value="completed">委托完成</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="附件">
           <div class="attachment-edit">
             <div v-for="(att, i) in hotelForm.attachments" :key="i" class="att-edit-item">
@@ -798,25 +826,31 @@ import { ElMessageBox } from 'element-plus'
         <el-form-item label="班次/航班">
           <el-input v-model="tripDetailForm.transportNo" placeholder="如:G7503 / CZ3567" />
         </el-form-item>
-        <el-form-item label="出发时间">
-          <el-time-select
-            v-model="tripDetailForm.startTime"
-            start="06:00"
-            step="01:00"
-            end="22:00"
-            placeholder="出发时间"
-            style="width: 100%"
-          />
+        <el-form-item label="时间区间">
+          <div class="time-range-row">
+            <el-time-picker
+              v-model="tripDetailForm.startTime"
+              format="HH:mm"
+              value-format="HH:mm"
+              placeholder="出发"
+              style="flex: 1"
+            />
+            <span class="time-range-arrow">→</span>
+            <el-time-picker
+              v-model="tripDetailForm.endTime"
+              format="HH:mm"
+              value-format="HH:mm"
+              placeholder="到达"
+              style="flex: 1"
+            />
+          </div>
         </el-form-item>
-        <el-form-item label="到达时间">
-          <el-time-select
-            v-model="tripDetailForm.endTime"
-            start="06:00"
-            step="01:00"
-            end="23:00"
-            placeholder="到达时间"
-            style="width: 100%"
-          />
+        <el-form-item label="委托状态">
+          <el-radio-group v-model="tripDetailForm.entrustStatus" size="small">
+            <el-radio-button value="none">不需要委托</el-radio-button>
+            <el-radio-button value="in_progress">委托进行中</el-radio-button>
+            <el-radio-button value="completed">委托完成</el-radio-button>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="负责人">
           <el-select v-model="tripDetailForm.managers" multiple placeholder="可多选" style="width: 100%">
@@ -1373,6 +1407,43 @@ import { ElMessageBox } from 'element-plus'
 }
 .att-edit-item .att-name {
   flex: 1;
+}
+
+/* ========== 时间区间一行 ========== */
+.time-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.time-range-row :deep(.el-time-picker) {
+  flex: 1;
+  width: 100%;
+}
+.time-range-arrow {
+  color: #c0c4cc;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ========== 委托状态底色（很淡,仅作背景提示） ========== */
+.entrust-none {
+  /* 默认白色,不需额外样式 */
+}
+.entrust-in_progress {
+  /* 背景色已在 :style 绑定 */
+}
+.entrust-completed {
+  /* 背景色已在 :style 绑定 */
+}
+/* 委托状态下,左边色条稍微淒点,让背景底色透气 */
+.entrust-in_progress.trip-card,
+.entrust-in_progress.hotel-card {
+  border-left-color: #FFD591;
+}
+.entrust-completed.trip-card,
+.entrust-completed.hotel-card {
+  border-left-color: #B7EB8F;
 }
 
 .dialog-footer {
