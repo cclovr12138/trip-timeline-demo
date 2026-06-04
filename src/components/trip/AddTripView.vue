@@ -99,7 +99,8 @@ const tripDetailForm = ref({
   transportType: 'train' as 'train' | 'plane' | 'car',
   transportNo: '',
   date: '',
-  timeRange: null as string[] | null,
+  startTime: '',
+  endTime: '',
   managers: [] as string[],
   attachments: [] as AttachmentInfo[],
   remark: '',
@@ -266,7 +267,8 @@ function openTripDialog(date?: string, index?: number) {
         transportType: item.category === 1 ? 'plane' : item.category === 2 ? 'car' : 'train',
         transportNo: item.transportNo || '',
         date: item.date,
-        timeRange: item.startTime && item.endTime ? [item.startTime, item.endTime] : null,
+        startTime: item.startTime || '',
+        endTime: item.endTime || '',
         managers: item.managers || [],
         attachments: item.attachments || [],
         remark: item.remark || '',
@@ -280,7 +282,8 @@ function openTripDialog(date?: string, index?: number) {
       transportType: 'train',
       transportNo: '',
       date: date || defaultDate.value || '',
-      timeRange: null,
+      startTime: '',
+      endTime: '',
       managers: [],
       attachments: [],
       remark: '',
@@ -360,7 +363,6 @@ function saveTrip() {
     return
   }
   const catMap: Record<string, 0 | 1 | 2> = { train: 0, plane: 1, car: 2 }
-  const timeRange = tripDetailForm.value.timeRange
   const item: DayLocationItem = {
     date: tripDetailForm.value.date,
     placeType: 'travel',
@@ -370,8 +372,8 @@ function saveTrip() {
     category: catMap[tripDetailForm.value.transportType],
     transportNo: tripDetailForm.value.transportNo,
     status: 'upcoming',
-    startTime: timeRange?.[0] || '',
-    endTime: timeRange?.[1] || '',
+    startTime: tripDetailForm.value.startTime,
+    endTime: tripDetailForm.value.endTime,
     managers: tripDetailForm.value.managers,
     attachments: tripDetailForm.value.attachments,
     remark: tripDetailForm.value.remark,
@@ -796,23 +798,24 @@ import { ElMessageBox } from 'element-plus'
         <el-form-item label="班次/航班">
           <el-input v-model="tripDetailForm.transportNo" placeholder="如:G7503 / CZ3567" />
         </el-form-item>
-        <el-form-item label="时间区间">
+        <el-form-item label="出发时间">
           <el-time-select
-            v-model="tripDetailForm.timeRange"
+            v-model="tripDetailForm.startTime"
             start="06:00"
             step="01:00"
             end="22:00"
             placeholder="出发时间"
-            style="width: 45%"
+            style="width: 100%"
           />
-          <span style="margin: 0 8px">→</span>
+        </el-form-item>
+        <el-form-item label="到达时间">
           <el-time-select
-            v-model="tripDetailForm.timeRange"
+            v-model="tripDetailForm.endTime"
             start="06:00"
             step="01:00"
             end="23:00"
             placeholder="到达时间"
-            style="width: 45%"
+            style="width: 100%"
           />
         </el-form-item>
         <el-form-item label="负责人">
@@ -1182,7 +1185,12 @@ import { ElMessageBox } from 'element-plus'
   font-weight: bold;
 }
 .route-from, .route-to {
-  flex: 1;
+  flex: 0 0 auto;  /* 不撑开,保持左侧自然排列 */
+  white-space: nowrap;
+}
+.route-arrow {
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 .transport-label {
   font-size: 12px;
