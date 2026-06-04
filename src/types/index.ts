@@ -17,6 +17,13 @@ export type TripType = 'domestic'
 // 视图模式
 export type ViewMode = 'day' | 'week' | 'month'
 
+// 附件信息
+export interface AttachmentInfo {
+  name: string                 // 文件名
+  icon?: string                // 图标 emoji,默认根据扩展名推断
+  size?: string                // 文件大小,如 "234KB"
+}
+
 // 当天行程/酒店明细项（用于当前所在地单元格 + 抽屉时间线）
 export interface DayLocationItem {
   placeType: PlaceType       // 'hotel' | 'travel'
@@ -30,7 +37,13 @@ export interface DayLocationItem {
   // hotel 专有
   hotelName?: string           // 酒店名称
   roomType?: string            // 房型
+  endDate?: string             // 酒店离开日 (YYYY-MM-DD)
+  // 通用
   status: 'ongoing' | 'upcoming' | 'finished'
+  remark?: string              // 出差备注
+  managerRemark?: string       // 负责人备注
+  managers?: string[]          // 负责人(员工ID列表)
+  attachments?: AttachmentInfo[] // 附件列表
 }
 
 // 行程项
