@@ -21,7 +21,7 @@ const selectedEmpId = ref<string | null>(null)
 const drawerVisible = ref(false)
 const hoveredEmpId = ref<string | null>(null)
 
-// 当前选中员工的完整数据（含每日明细）
+// 当前选中员工的完整数据(含每日明细)
 const selectedEmployee = computed(() => {
   if (!selectedEmpId.value) return null
   const row = store.allTimelineData.find(r => r.empId === selectedEmpId.value)
@@ -32,7 +32,7 @@ const selectedEmployee = computed(() => {
   }
 })
 
-// 计算员工当前所在地（今日行程目的地）
+// 计算员工当前所在地(今日行程目的地)
 const employeeCurrentLocation = computed(() => {
   const map = new Map<string, DayLocationItem[]>()
   const today = dayjs().format('YYYY-MM-DD')
@@ -44,7 +44,7 @@ const employeeCurrentLocation = computed(() => {
   return map
 })
 
-// 单元格显示文本（120px内显示的内容）
+// 单元格显示文本(120px内显示的内容)
 function getLocationDisplayText(items: DayLocationItem[]): string {
   if (!items || items.length === 0) return '-'
   // 优先显示 ongoing 的 travel
@@ -108,7 +108,7 @@ const dataDateRange = computed(() => {
   return { start: earliest, end: latest }
 })
 
-// 周始日（0=周日, 1=周一）—— 从 localStorage 读取，运行时可切换
+// 周始日(0=周日, 1=周一)-- 从 localStorage 读取,运行时可切换
 const STORAGE_KEY_WEEK_START = 'trip-timeline:weekStartDay'
 const weekStartDay = ref<WeekStartDay>(
   (() => {
@@ -129,10 +129,10 @@ watch(weekStartDay, (v) => {
   }
 })
 
-// 中文星期（周几 → 单字）
+// 中文星期(周几 → 单字)
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
-// 单个日格（第二层）的元信息
+// 单个日格(第二层)的元信息
 interface DayCell {
   date: string
   dayLabel: string
@@ -142,7 +142,7 @@ interface DayCell {
   isWeekStartDay: boolean
 }
 
-// 周格（周/月视图第一层，或月视图第二层）
+// 周格(周/月视图第一层,或月视图第二层)
 interface WeekCell {
   startDate: string
   endDate: string
@@ -150,7 +150,7 @@ interface WeekCell {
   spanDays: number // 始终为 7
 }
 
-// 月格（仅月视图第一层）
+// 月格(仅月视图第一层)
 interface MonthCell {
   monthKey: string // yyyy-MM
   title: string // yyyy-MM
@@ -159,7 +159,7 @@ interface MonthCell {
   endWeekIndex: number // 不含
 }
 
-// 核心：表头计算（根据 R1/R2/R3 新算法）
+// 核心:表头计算(根据 R1/R2/R3 新算法)
 const headerInfo = computed(() => {
   const { start, end } = dataDateRange.value
   const dataStart = dayjs(start)
@@ -200,7 +200,7 @@ const headerInfo = computed(() => {
     })
   }
 
-  // 月格（按周所在的 yyyy-MM 分组）
+  // 月格(按周所在的 yyyy-MM 分组)
   const months: MonthCell[] = []
   if (weeks.length > 0) {
     let curKey = dayjs(weeks[0].startDate).format('YYYY-MM')
@@ -238,16 +238,16 @@ const headerLabels = computed(() => headerInfo.value.days)
 
 const dateRangeStart = computed(() => dates.value[0] || '')
 
-// 单个日格的逻辑宽度（用于 header layer2 与 body 同一基线）
+// 单个日格的逻辑宽度(用于 header layer2 与 body 同一基线)
 const dayWidth = 80
-// 周格宽度（layer1 周）= 7 * dayWidth；月视图下压缩为 2 * dayWidth
+// 周格宽度(layer1 周)= 7 * dayWidth;月视图下压缩为 2 * dayWidth
 const weekWidth = computed(() =>
   store.viewMode === 'month' ? 2 * dayWidth : 7 * dayWidth
 )
-// 月格宽度（layer1 月）= 该月含周数 * weekWidth
+// 月格宽度(layer1 月)= 该月含周数 * weekWidth
 const monthWidthOf = (m: MonthCell) => m.spanWeeks * weekWidth.value
 
-// body 中每一天的渲染宽度（保持 header/body 滚动同步）
+// body 中每一天的渲染宽度(保持 header/body 滚动同步)
 const bodyDayWidth = computed(() => {
   if (store.viewMode === 'month') {
     return (2 * dayWidth) / 7
@@ -255,10 +255,10 @@ const bodyDayWidth = computed(() => {
   return dayWidth
 })
 
-// body 总宽度 = dates.length * bodyDayWidth（与 header layer1 总宽一致）
+// body 总宽度 = dates.length * bodyDayWidth(与 header layer1 总宽一致)
 const totalWidth = computed(() => dates.value.length * bodyDayWidth.value)
 
-// 表头总高度：日视图 40px；周/月视图 80px
+// 表头总高度:日视图 40px;周/月视图 80px
 const headerTotalHeight = computed(() => (store.viewMode === 'day' ? 40 : 80))
 const hasFirstLayer = computed(() => store.viewMode !== 'day')
 
@@ -267,25 +267,75 @@ const rowHeight = 40
 
 const headerScrollRef = ref<HTMLElement | null>(null)
 const bodyScrollRef = ref<HTMLElement | null>(null)
+const employeeColumnRef = ref<HTMLElement | null>(null)
+const timelineContentRef = ref<HTMLElement | null>(null)
+let isSyncingVertical = false
+let isSyncingHorizontal = false
 
-// 表头和内容同步滚动
-function onBodyScroll(event: Event) {
-  const target = event.target as HTMLElement
-  if (headerScrollRef.value) {
-    headerScrollRef.value.scrollLeft = target.scrollLeft
-  }
+/**
+ * 安全地将 scrollLeft 同步到目标元素。
+ * 双保险:
+ * 1) 值未变则跳过,避免不必要的事件触发
+ * 2) 用 isSyncingHorizontal 标志位阻断递归调用
+ * 3) 用双重 rAF 异步重置标志位,确保覆盖浏览器可能异步派发的 scroll 事件
+ */
+function syncHorizontalTo(el: HTMLElement | null, value: number) {
+  if (!el) return
+  if (el.scrollLeft === value) return
+  isSyncingHorizontal = true
+  el.scrollLeft = value
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      isSyncingHorizontal = false
+    })
+  })
 }
 
+// 横向滚动同步（表头 .timeline-header -> 内容 .timeline-content）
 function onHeaderScroll(event: Event) {
+  if (isSyncingHorizontal) return
   const target = event.target as HTMLElement
-  if (bodyScrollRef.value) {
-    bodyScrollRef.value.scrollLeft = target.scrollLeft
+  syncHorizontalTo(timelineContentRef.value, target.scrollLeft)
+}
+
+// 横向/纵向滚动同步（内容 .timeline-content -> 表头/员工列）
+function onTimelineContentScroll(event: Event) {
+  const target = event.target as HTMLElement
+  // 纵向同步（员工列 <-> 时间轴内容）-- 双 rAF 异步重置避免回递归
+  if (!isSyncingVertical) {
+    isSyncingVertical = true
+    if (employeeColumnRef.value) {
+      employeeColumnRef.value.scrollTop = target.scrollTop
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        isSyncingVertical = false
+      })
+    })
   }
+  // 横向同步到表头（syncHorizontalTo 内部已管理 isSyncingHorizontal 标志位,无需重复）
+  syncHorizontalTo(headerScrollRef.value, target.scrollLeft)
+}
+
+// 纵向滚动同步（.employee-column -> .timeline-content）
+function onEmployeeScroll(event: Event) {
+  if (isSyncingVertical) return
+  const target = event.target as HTMLElement
+  isSyncingVertical = true
+  if (timelineContentRef.value) {
+    timelineContentRef.value.scrollTop = target.scrollTop
+  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      isSyncingVertical = false
+    })
+  })
 }
 
 watch(() => store.viewMode, () => {
   if (bodyScrollRef.value) bodyScrollRef.value.scrollLeft = 0
   if (headerScrollRef.value) headerScrollRef.value.scrollLeft = 0
+  if (timelineContentRef.value) timelineContentRef.value.scrollLeft = 0
 })
 
 interface TooltipState {
@@ -312,7 +362,7 @@ function handleTripHover(trip: TripItem, event: MouseEvent) {
   }
 }
 
-// 今天所在列的索引（用于表体高亮）
+// 今天所在列的索引(用于表体高亮)
 const today = dayjs().format('YYYY-MM-DD')
 const todayIndex = computed(() => dates.value.indexOf(today))
 
@@ -324,11 +374,12 @@ function goToToday() {
   const today = dayjs().format('YYYY-MM-DD')
   const idx = dates.value.indexOf(today)
   if (idx !== -1) {
-    const scrollEl = bodyScrollRef.value
     const headerEl = headerScrollRef.value
-    if (!scrollEl) return
-    const targetOffset = idx * dayWidth
-    const startOffset = scrollEl.scrollLeft
+    const contentEl = timelineContentRef.value
+    if (!headerEl || !contentEl) return
+    // 使用 bodyDayWidth(与 body 实际渲染宽度一致),月视图下也会正确
+    const targetOffset = idx * bodyDayWidth.value
+    const startOffset = contentEl.scrollLeft
     const delta = targetOffset - startOffset
     const duration = 400
     const startTime = performance.now()
@@ -342,11 +393,14 @@ function goToToday() {
       const progress = Math.min(elapsed / duration, 1)
       const eased = easeInOut(progress)
       const currentOffset = startOffset + delta * eased
-      scrollEl.scrollLeft = currentOffset
-      if (headerEl) headerEl.scrollLeft = currentOffset
+      // 主动同步两个区域,保证动画期间表头和内容区视觉同步
+      // isSyncingHorizontal 阻断 scroll 事件回递归(.timeline-main 没有可滚动空间不会触发)
+      isSyncingHorizontal = true
+      contentEl.scrollLeft = currentOffset
+      headerEl.scrollLeft = currentOffset
+      isSyncingHorizontal = false
       if (progress < 1) requestAnimationFrame(animate)
     }
-
 
     requestAnimationFrame(animate)
   }
@@ -380,41 +434,147 @@ function goToToday() {
 
     <FilterPanel :departments="store.departmentList" />
 
-    <div class="timeline-container">
-    <div class="timeline-toolbar">
-      <div class="toolbar-left">
-        <h2 class="page-title">企业出差行程管理系统</h2>
-      </div>
-      
-      <div class="toolbar-center" />
-      
-      <div class="toolbar-right">
-        <button type="button" class="today-btn el-button el-button--primary el-button--small" @click.stop="goToToday">今天</button>
-
-        <div class="weekstart-switch">
-          <span class="weekstart-label">周始日</span>
-          <el-radio-group v-model="weekStartDay" size="small">
-            <el-radio-button :value="1">周一</el-radio-button>
-            <el-radio-button :value="0">周日</el-radio-button>
-          </el-radio-group>
+    <!-- ====== 顶部区域(sticky 吸顶) ====== -->
+    <div class="timeline-sticky-header">
+      <!-- 工具栏(满宽) -->
+      <div class="timeline-toolbar">
+        <div class="toolbar-left">
+          <h2 class="page-title">企业出差行程管理系统</h2>
         </div>
 
-        <el-radio-group v-model="store.viewMode" size="small">
-          <el-radio-button value="day">日</el-radio-button>
-          <el-radio-button value="week">周</el-radio-button>
-          <el-radio-button value="month">月</el-radio-button>
-        </el-radio-group>
-      </div>
-    </div>
+        <div class="toolbar-center" />
 
-    <!-- 时间轴区域 -->
-    <div class="timeline-main">
-      <!-- 左侧员工列（固定） -->
-      <div class="employee-column">
+        <div class="toolbar-right">
+          <button type="button" class="today-btn el-button el-button--primary el-button--small" @click.stop="goToToday">今天</button>
+
+          <div class="weekstart-switch">
+            <span class="weekstart-label">周始日</span>
+            <el-radio-group v-model="weekStartDay" size="small">
+              <el-radio-button :value="1">周一</el-radio-button>
+              <el-radio-button :value="0">周日</el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <el-radio-group v-model="store.viewMode" size="small">
+            <el-radio-button value="day">日</el-radio-button>
+            <el-radio-button value="week">周</el-radio-button>
+            <el-radio-button value="month">月</el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
+
+      <!-- 表头行(sticky row: employee-header + timeline-header 并排) -->
+      <div class="sticky-row">
+        <!-- 左侧员工列表表头 -->
         <div class="employee-header" :style="{ height: headerTotalHeight + 'px' }">
           <div class="employee-header-cell">员工</div>
           <div class="employee-header-cell location-header">当前所在地</div>
         </div>
+
+        <!-- 右侧日期表头(自己横向滚动) -->
+        <div
+          ref="headerScrollRef"
+          class="timeline-header"
+          :class="{ 'has-two-rows': hasFirstLayer }"
+          :style="{ height: headerTotalHeight + 'px' }"
+          @scroll="onHeaderScroll"
+        >
+          <!-- =========== 日视图:单层表头 =========== -->
+          <template v-if="store.viewMode === 'day'">
+            <div
+              class="header-row header-single"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(cell, index) in headerLabels"
+                :key="dates[index]"
+                class="header-cell"
+                :class="{
+                  'is-today': cell.isToday,
+                  'is-weekend': cell.isWeekend,
+                  'is-week-start': index !== 0 && cell.isWeekStartDay,
+                }"
+                :style="{ width: dayWidth + 'px', height: '40px' }"
+              >
+                <span class="day-label">周{{ cell.dayLabel }}</span>
+                <span class="day-num">{{ cell.dayNum }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- =========== 周视图:双层表头(周 + 日) =========== -->
+          <template v-else-if="store.viewMode === 'week'">
+            <div
+              class="header-row header-title"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(w, idx) in firstLayerGroups"
+                :key="'w-' + idx"
+                class="header-title-cell"
+                :style="{ width: (7 * dayWidth) + 'px', height: '40px' }"
+              >
+                {{ w.title }}
+              </div>
+            </div>
+            <div
+              class="header-row header-weekday"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(cell, index) in headerLabels"
+                :key="dates[index]"
+                class="header-cell"
+                :class="{
+                  'is-today': cell.isToday,
+                  'is-weekend': cell.isWeekend,
+                  'is-week-start': index !== 0 && cell.isWeekStartDay,
+                }"
+                :style="{ width: dayWidth + 'px', height: '40px' }"
+              >
+                <span class="day-label">周{{ cell.dayLabel }}</span>
+                <span class="day-num">{{ cell.dayNum }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- =========== 月视图:双层表头(月 + 周) =========== -->
+          <template v-else>
+            <div
+              class="header-row header-title"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(m, idx) in monthGroups"
+                :key="'m-' + idx"
+                class="header-title-cell"
+                :style="{ width: monthWidthOf(m) + 'px', height: '40px' }"
+              >
+                {{ m.title }}
+              </div>
+            </div>
+            <div
+              class="header-row header-weekday"
+              :style="{ width: totalWidth + 'px', height: '40px' }"
+            >
+              <div
+                v-for="(w, idx) in firstLayerGroups"
+                :key="'mw-' + idx"
+                class="header-cell header-cell--week"
+                :style="{ width: weekWidth + 'px', height: '40px' }"
+              >
+                <span class="week-label">{{ w.title }}</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 滚动区域 ====== -->
+    <div class="timeline-main" ref="bodyScrollRef">
+      <!-- 左侧员工列 -->
+      <div class="employee-column" ref="employeeColumnRef" @scroll="onEmployeeScroll">
         <div class="employee-list">
           <div
             v-for="row in store.filteredData"
@@ -451,126 +611,25 @@ function goToToday() {
       </div>
 
       <!-- 右侧时间轴 -->
-      <div class="timeline-content">
-        <!-- 表头（与 body 平级，sticky 相对 .timeline-body 吸顶） -->
-        <div 
-          ref="headerScrollRef"
-          class="timeline-header"
-          :class="{ 'has-two-rows': hasFirstLayer }"
-          :style="{ height: headerTotalHeight + 'px' }"
-          @scroll="onHeaderScroll"
-        >
-          <!-- =========== 日视图：单层表头 =========== -->
-          <template v-if="store.viewMode === 'day'">
-            <div
-              class="header-row header-single"
-              :style="{ width: totalWidth + 'px', height: '40px' }"
-            >
-              <div
-                v-for="(cell, index) in headerLabels"
-                :key="dates[index]"
-                class="header-cell"
-                :class="{
-                  'is-today': cell.isToday,
-                  'is-weekend': cell.isWeekend,
-                  'is-week-start': index !== 0 && cell.isWeekStartDay,
-                }"
-                :style="{ width: dayWidth + 'px', height: '40px' }"
-              >
-                <span class="day-label">周{{ cell.dayLabel }}</span>
-                <span class="day-num">{{ cell.dayNum }}</span>
-              </div>
-            </div>
+      <div class="timeline-content" ref="timelineContentRef" @scroll="onTimelineContentScroll">
+        <div class="timeline-body-inner" :style="{ width: totalWidth + 'px' }">
+          <template v-if="store.filteredData.length > 0">
+            <TimelineRow
+              v-for="row in store.filteredData"
+              :key="row.empId"
+              :row="row"
+              :dates="dates"
+              :range-start="dateRangeStart"
+              :day-width="bodyDayWidth"
+              :row-height="rowHeight"
+              :hovered-emp-id="hoveredEmpId"
+              :today-index="todayIndex"
+              @trip-hover="handleTripHover"
+              @trip-leave="handleTripLeave"
+            />
           </template>
-
-          <!-- =========== 周视图：双层表头（周 + 日） =========== -->
-          <template v-else-if="store.viewMode === 'week'">
-            <div
-              class="header-row header-title"
-              :style="{ width: totalWidth + 'px', height: '40px' }"
-            >
-              <div
-                v-for="(w, idx) in firstLayerGroups"
-                :key="'w-' + idx"
-                class="header-title-cell"
-                :style="{ width: (7 * dayWidth) + 'px', height: '40px' }"
-              >
-                {{ w.title }}
-              </div>
-            </div>
-            <div
-              class="header-row header-weekday"
-              :style="{ width: totalWidth + 'px', height: '40px' }"
-            >
-              <div
-                v-for="(cell, index) in headerLabels"
-                :key="dates[index]"
-                class="header-cell"
-                :class="{
-                  'is-today': cell.isToday,
-                  'is-weekend': cell.isWeekend,
-                  'is-week-start': index !== 0 && cell.isWeekStartDay,
-                }"
-                :style="{ width: dayWidth + 'px', height: '40px' }"
-              >
-                <span class="day-label">周{{ cell.dayLabel }}</span>
-                <span class="day-num">{{ cell.dayNum }}</span>
-              </div>
-            </div>
-          </template>
-
-          <!-- =========== 月视图：双层表头（月 + 周） =========== -->
-          <template v-else>
-            <div
-              class="header-row header-title"
-              :style="{ width: totalWidth + 'px', height: '40px' }"
-            >
-              <div
-                v-for="(m, idx) in monthGroups"
-                :key="'m-' + idx"
-                class="header-title-cell"
-                :style="{ width: monthWidthOf(m) + 'px', height: '40px' }"
-              >
-                {{ m.title }}
-              </div>
-            </div>
-            <div
-              class="header-row header-weekday"
-              :style="{ width: totalWidth + 'px', height: '40px' }"
-            >
-              <div
-                v-for="(w, idx) in firstLayerGroups"
-                :key="'mw-' + idx"
-                class="header-cell header-cell--week"
-                :style="{ width: weekWidth + 'px', height: '40px' }"
-              >
-                <span class="week-label">{{ w.title }}</span>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- 表体 -->
-        <div ref="bodyScrollRef" class="timeline-body" @scroll="onBodyScroll">
-          <div class="timeline-body-inner" :style="{ width: totalWidth + 'px' }">
-            <template v-if="store.filteredData.length > 0">
-              <TimelineRow
-                v-for="row in store.filteredData"
-                :key="row.empId"
-                :row="row"
-                :dates="dates"
-                :range-start="dateRangeStart"
-                :day-width="bodyDayWidth"
-                :row-height="rowHeight"
-                :hovered-emp-id="hoveredEmpId"
-                :today-index="todayIndex"
-                @trip-hover="handleTripHover"
-                @trip-leave="handleTripLeave"
-              />
-            </template>
-            <div v-else class="empty-state">
-              暂无出差行程
-            </div>
+          <div v-else class="empty-state">
+            暂无出差行程
           </div>
         </div>
       </div>
@@ -643,9 +702,9 @@ function goToToday() {
                 </el-tag>
               </div>
 
-              <!-- 助理信息（行程下方） -->
+              <!-- 助理信息(行程下方) -->
               <div v-if="trip.assistants && trip.assistants.length > 0" class="trip-assistants-row">
-                <span class="assist-label">助理：</span>
+                <span class="assist-label">助理:</span>
                 <span
                   v-for="(asst, idx) in trip.assistants"
                   :key="idx"
@@ -680,7 +739,7 @@ function goToToday() {
                   class="timeline-item"
                   :class="[item.placeType, 'item-' + item.status]"
                 >
-                  <!-- 连接线（除最后一个） -->
+                  <!-- 连接线(除最后一个) -->
                   <div v-if="idx < trip.dayItems.length - 1" class="timeline-line" />
 
                   <!-- 图标点 -->
@@ -718,7 +777,6 @@ function goToToday() {
         </div>
       </template>
     </el-drawer>
-    </div>
   </div>
 </template>
 
@@ -798,10 +856,42 @@ function goToToday() {
 .timeline-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
   background: white;
   border-radius: 8px;
-  overflow: hidden;
+}
+
+/* 顶部 sticky 区域(工具栏 + 表头行) */
+.timeline-sticky-header {
+  position: sticky;
+  top: -24px;
+  z-index: 10;
+  background: white;
+  flex-shrink: 0;
+  border-left: 1px solid #DCDFE6;
+  border-right: 1px solid #DCDFE6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  /* 抵消 .dashboard-view 的 16px gap,让吸顶表头与下方内容板块无缝拼接成一个完整卡片 */
+  margin-bottom: -16px;
+}
+
+/* 表头行:employee-header + timeline-header 并排 */
+.sticky-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #DCDFE6;
+}
+
+.employee-header {
+  width: 240px;
+  flex-shrink: 0;
+}
+
+/* 滚动区域:与 sticky-header 等高排列 */
+.timeline-main {
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .timeline-toolbar {
@@ -862,8 +952,16 @@ function goToToday() {
 .timeline-main {
   flex: 1;
   display: flex;
-  overflow: hidden;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
   min-height: 0;
+  margin-top: 0;
+  border-left: 1px solid #DCDFE6;
+  border-right: 1px solid #DCDFE6;
+  border-bottom: 1px solid #DCDFE6;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 /* 左侧员工列 */
@@ -874,13 +972,13 @@ function goToToday() {
   flex-direction: column;
   border-right: 1px solid #E5E6EB;
   background: white;
+  overflow: auto;
 }
 
 .employee-header {
   display: flex;
   align-items: center;
   background: #F5F7FA;
-  border-bottom: 1px solid #E5E6EB;
   flex-shrink: 0;
 }
 
@@ -899,6 +997,7 @@ function goToToday() {
 
 .location-header {
   width: 120px;
+  border-right: 1px solid #E5E6EB;
 }
 
 .employee-row {
@@ -982,29 +1081,30 @@ function goToToday() {
   font-size: 12px;
 }
 
-/* 右侧时间轴（总容器） */
+/* 右侧时间轴(总容器) */
 .timeline-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  position: relative;
+  overflow: auto;
   min-width: 0;
+  background: white;
 }
 
-/* 表头本身（sticky 吸顶） */
+/* 表头本身(sticky 吸顶)
+ * flex:1 + min-width:0 让它填满剩余宽度,overflow-x:auto 让内部 .header-row(width:totalWidth)
+ * 产生水平滚动。这是表头横向滚动的关键:表头自己滚动,跟下面 .timeline-content 同步。 */
 .timeline-header {
   display: flex;
   flex-direction: column;
   background: #F5F7FA;
   overflow-x: auto;
   overflow-y: hidden;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex: 1;
+  min-width: 0;
 }
 
+/* 隐藏表头滚动条(视觉上不需要,scrollLeft 仍可被 JS 设置以同步滚动) */
 .timeline-header::-webkit-scrollbar {
   display: none;
 }
@@ -1070,12 +1170,12 @@ function goToToday() {
   color: #909399;
 }
 
-/* 周始日格：无额外标记 */
+/* 周始日格:无额外标记 */
 .header-cell.is-week-start {
   /* 保持与普通格一致 */
 }
 
-/* 月视图下的周格（Layer 2） */
+/* 月视图下的周格(Layer 2) */
 .header-cell--week {
   background: #F5F7FA;
 }
@@ -1366,7 +1466,7 @@ function goToToday() {
   color: #909399;
 }
 
-/* 助理信息（行程下方，独立一行） */
+/* 助理信息(行程下方,独立一行) */
 .trip-assistants-row {
   display: flex;
   align-items: center;

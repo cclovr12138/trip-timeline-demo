@@ -6,9 +6,15 @@
 
 ## [Unreleased]
 
+### Fixed
+- **横向滚动同步逻辑加固**：
+  - 删除 `isSyncingVertical` 同步重置的死循环隐患，改用双 rAF 异步重置（与 `isSyncingHorizontal` 一致）
+  - 简化 `onTimelineContentScroll` 的横向同步路径，去除重复的 rAF 重置链（`syncHorizontalTo` 内部已统一管理）
+  - 删除 `.timeline-header::-webkit-scrollbar` 重复规则，避免样式冗余
+- **表头滚动架构验证**：`headerScrollRef` 放在 `.timeline-header`（`flex:1; min-width:0; overflow-x:auto`）上，内部 `.header-row { width: totalWidth }` 撑开滚动条；`scrollLeft` 可被 JS 同步设置，实现与 `.timeline-content` 的双向滚动联动
+
 ### Changed
-- **Timeline 布局调整**：`.app-main` 恢复 `overflow-y: auto`，`.timeline-main` 加 `min-height: 0`
-- **表头吸顶**：将 `.timeline-header` 从 `.timeline-body` 内部移出，与 body 平级（解决 sticky 的"最近滚动祖先"为自己导致失效的问题）；表头加 `flex-shrink: 0`
+- **Timeline 布局重组**：将 toolbar + employee-header + timeline-header 提取到独立的 `.timeline-sticky-header`（`position: sticky; top: 0`），三个元素作为整体一起吸顶；下方 `.timeline-main` 为内容滚动区，左右列（员工列表 + 时间轴）独立垂直滚动；去掉旧的 `overflow: hidden` 嵌套结构
 
 ### Added
 - **员工数据扩展**：从 10 人扩展到 50 人（E001-E050），覆盖技术/市场/销售/产品/财务/人力资源各部门
