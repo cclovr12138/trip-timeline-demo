@@ -570,7 +570,10 @@ import { ElMessageBox } from 'element-plus'
                   { 'is-editable': editMode },
                   `entrust-${hotel.entrustStatus || 'none'}`,
                 ]"
-                :style="{ background: ENTRUST_STATUS_BG[hotel.entrustStatus || 'none'] }"
+                :style="{
+                  '--card-accent': '#67C23A',
+                  background: ENTRUST_STATUS_BG[hotel.entrustStatus || 'none'],
+                }"
               >
                 <div class="card-title hotel-title">
                   <span class="title-bar" style="background: #67C23A"></span>
@@ -663,7 +666,7 @@ import { ElMessageBox } from 'element-plus'
                   `entrust-${trip.entrustStatus || 'none'}`,
                 ]"
                 :style="{
-                  borderLeftColor: getItemColor(trip),
+                  '--card-accent': getItemColor(trip),
                   background: ENTRUST_STATUS_BG[trip.entrustStatus || 'none'],
                 }"
               >
@@ -1122,29 +1125,39 @@ import { ElMessageBox } from 'element-plus'
   border: 1px solid #e5e6eb;
   border-radius: 6px;
   padding: 12px;
+  padding-left: 16px;  /* 左侧多出一点,让 ::before 色条不贴住内容 */
   margin-bottom: 8px;
   transition: all 0.2s;
   position: relative;
+  overflow: hidden;  /* 裁掉 ::before 边角的锐利感 */
 }
 .card:last-child {
   margin-bottom: 0;
 }
 .card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border-color: #c0c4cc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);  /* 只动 box-shadow,不动 border-color */
 }
 .card.is-editable {
   cursor: pointer;
 }
-.card.is-editable:hover {
-  border-color: rgb(130, 189, 164);
-}
 
-.hotel-card {
-  border-left: 4px solid #67c23a;
+/* 左侧色条用 ::before 伪元素,不受 hover 动 border 影响 */
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--card-accent, #67C23A);
+  border-radius: 6px 0 0 6px;
+  transition: background 0.2s;
 }
-.trip-card {
-  border-left: 4px solid #409eff;
+.hotel-card::before {
+  background: #67c23a;
+}
+.trip-card::before {
+  background: var(--card-accent, #409eff);
 }
 
 .card-title {
@@ -1426,25 +1439,9 @@ import { ElMessageBox } from 'element-plus'
   flex-shrink: 0;
 }
 
-/* ========== 委托状态底色（很淡,仅作背景提示） ========== */
-.entrust-none {
-  /* 默认白色,不需额外样式 */
-}
-.entrust-in_progress {
-  /* 背景色已在 :style 绑定 */
-}
-.entrust-completed {
-  /* 背景色已在 :style 绑定 */
-}
-/* 委托状态下,左边色条稍微淒点,让背景底色透气 */
-.entrust-in_progress.trip-card,
-.entrust-in_progress.hotel-card {
-  border-left-color: #FFD591;
-}
-.entrust-completed.trip-card,
-.entrust-completed.hotel-card {
-  border-left-color: #B7EB8F;
-}
+/* ========== 委托状态底色（极淡,几乎看不出,仅作微调） ========== */
+/* 背景色已通过 :style 绑定 ENTRUST_STATUS_BG */
+/* 不需要额外 CSS 类,保持纯背景色变化 */
 
 .dialog-footer {
   display: flex;

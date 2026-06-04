@@ -167,9 +167,9 @@ export const ENTRUST_STATUS_LABELS: Record<EntrustStatus, string> = {
   completed: '委托完成',
 } as const
 
-// 委托状态底色（很淡,不喧宾夺主）
+// 委托状态底色（极淡,几乎看不出的提示）
 export const ENTRUST_STATUS_BG: Record<EntrustStatus, string> = {
   none: '#FFFFFF',       // 纯白(默认)
-  in_progress: '#FFFBE6', // 极淡橙黄
-  completed: '#F6FFED',  // 极淡绿
+  in_progress: '#FFFEFA', // 几乎纯白,微带暖调
+  completed: '#FAFFFA',  // 几乎纯白,微带冷调
 } as const
