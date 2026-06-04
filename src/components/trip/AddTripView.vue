@@ -162,11 +162,20 @@ function getTransportLabel(category?: number): string {
 // 按天分组
 // ========================
 const dayList = computed(() => {
+  // 归一化:Date 对象或字符串都转成 'YYYY-MM-DD' 字符串,避免 6/4 被当成两个不同日期
+  const toDateStr = (d: string | Date | undefined | null): string => {
+    if (!d) return ''
+    if (typeof d === 'string') return d
+    return dayjs(d).format('YYYY-MM-DD')
+  }
+
   // 优先按出差日期范围生成每一天;无范围则按 item 日期
   let dates: string[] = []
-  if (tripForm.value.startDate && tripForm.value.endDate) {
-    const start = dayjs(tripForm.value.startDate)
-    const end = dayjs(tripForm.value.endDate)
+  const startStr = toDateStr(tripForm.value.startDate)
+  const endStr = toDateStr(tripForm.value.endDate)
+  if (startStr && endStr) {
+    const start = dayjs(startStr)
+    const end = dayjs(endStr)
     if (start.isValid() && end.isValid() && !start.isAfter(end)) {
       let cur = start
       while (cur.isBefore(end) || cur.isSame(end, 'day')) {
@@ -177,12 +186,13 @@ const dayList = computed(() => {
   }
   // 用 item 日期补全
   for (const item of tripList.value) {
-    if (item.date && !dates.includes(item.date)) dates.push(item.date)
+    const d = toDateStr(item.date)
+    if (d && !dates.includes(d)) dates.push(d)
   }
   dates.sort()
 
   return dates.map((date) => {
-    const items = tripList.value.filter((i) => i.date === date)
+    const items = tripList.value.filter((i) => toDateStr(i.date) === date)
     return {
       date,
       hotels: items.filter((i) => i.placeType === 'hotel'),
@@ -471,6 +481,7 @@ import { ElMessageBox } from 'element-plus'
           <el-date-picker
             v-model="tripForm.startDate"
             type="date"
+            value-format="YYYY-MM-DD"
             placeholder="出发日"
             style="flex: 1"
           />
@@ -478,6 +489,7 @@ import { ElMessageBox } from 'element-plus'
           <el-date-picker
             v-model="tripForm.endDate"
             type="date"
+            value-format="YYYY-MM-DD"
             placeholder="到达日"
             style="flex: 1"
           />
@@ -726,10 +738,10 @@ import { ElMessageBox } from 'element-plus'
       <!-- Step 2: 酒店表单 -->
       <el-form v-else-if="dialogStep === 'hotel'" label-width="90px" label-position="left" class="dialog-form">
         <el-form-item label="入住日" required>
-          <el-date-picker v-model="hotelForm.checkInDate" type="date" placeholder="选择入住日期" style="width: 100%" />
+          <el-date-picker v-model="hotelForm.checkInDate" type="date" value-format="YYYY-MM-DD" placeholder="选择入住日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="离开日">
-          <el-date-picker v-model="hotelForm.checkOutDate" type="date" placeholder="选择离开日期" style="width: 100%" />
+          <el-date-picker v-model="hotelForm.checkOutDate" type="date" value-format="YYYY-MM-DD" placeholder="选择离开日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="入住城市" required>
           <el-input v-model="hotelForm.city" placeholder="请输入入住城市" />
@@ -766,7 +778,7 @@ import { ElMessageBox } from 'element-plus'
       <!-- Step 3: 行程表单 -->
       <el-form v-else-if="dialogStep === 'trip'" label-width="90px" label-position="left" class="dialog-form">
         <el-form-item label="出行日期" required>
-          <el-date-picker v-model="tripDetailForm.date" type="date" placeholder="选择出行日期" style="width: 100%" />
+          <el-date-picker v-model="tripDetailForm.date" type="date" value-format="YYYY-MM-DD" placeholder="选择出行日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="出发地" required>
           <el-input v-model="tripDetailForm.startPlace" placeholder="请输入出发地" />
