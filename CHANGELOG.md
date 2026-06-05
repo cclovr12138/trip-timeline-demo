@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed
+- **酒店卡片入住/离开日期显示格式**：在 `AddTripView.vue` 中新增 `formatDateLong`，把酒店卡片时间区间从 `M/D`（如 `6/5 入住 · 6/6 离开`）改为 `YYYY-MM-DD`（如 `2026-06-05 入住 · 2026-06-06 离开`），与出差日期保持一致；中间日期气泡仍保留紧凑 `M/D` 格式
+- **行程卡片时间区间显示格式**：在 `AddTripView.vue` 的行程卡标题行（`trip-title`）中新增 `.trip-date` 元素，把出发日期 `YYYY-MM-DD` 作为独立小标签插在 `trip-icon` 和 `trip-time` 之间（如 `✈ 2026-06-05 09:44 → 10:44`），不再和时分挤在一起；对应的 `formatTripTime` 函数已删除
+
 ### Fixed
 - **横向滚动同步逻辑加固**：
   - 删除 `isSyncingVertical` 同步重置的死循环隐患，改用双 rAF 异步重置（与 `isSyncingHorizontal` 一致）

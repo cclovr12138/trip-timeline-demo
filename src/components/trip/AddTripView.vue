@@ -143,6 +143,11 @@ function formatDateShort(date: string): string {
   return dayjs(date).format('M/D')
 }
 
+function formatDateLong(date: string): string {
+  if (!date) return ''
+  return dayjs(date).format('YYYY-MM-DD')
+}
+
 function formatWeekday(date: string): string {
   if (!date) return ''
   const weekdays = ['日', '一', '二', '三', '四', '五', '六']
@@ -584,10 +589,10 @@ import { ElMessageBox } from 'element-plus'
                 </div>
                 <div class="card-sub">
                   <span class="sub-icon">🕐</span>
-                  {{ formatDateShort(hotel.date) }} 入住
+                  {{ formatDateLong(hotel.date) }} 入住
                   <template v-if="hotel.endDate && hotel.endDate !== hotel.date">
                     <span class="separator">·</span>
-                    {{ formatDateShort(hotel.endDate) }} 离开
+                    {{ formatDateLong(hotel.endDate) }} 离开
                   </template>
                 </div>
 
@@ -672,6 +677,7 @@ import { ElMessageBox } from 'element-plus'
               >
                 <div class="card-title trip-title">
                   <span class="trip-icon">{{ getItemIcon(trip) }}</span>
+                  <span class="trip-date" v-if="trip.date">{{ formatDateLong(trip.date) }}</span>
                   <span class="trip-time" v-if="trip.startTime || trip.endTime">
                     {{ trip.startTime || '--:--' }} <span class="arrow">→</span> {{ trip.endTime || '--:--' }}
                   </span>
@@ -1203,6 +1209,16 @@ import { ElMessageBox } from 'element-plus'
 .trip-icon {
   font-size: 16px;
   flex-shrink: 0;
+}
+.trip-date {
+  font-size: 12px;
+  color: #606266;
+  background: #f4f4f5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-family: monospace;
+  letter-spacing: 0.2px;
 }
 .trip-time {
   font-size: 13px;
