@@ -1,7 +1,9 @@
 # DEPLOY.md - 部署文档（trip-timeline-demo）
 
 > 适用于本项目 `trip-timeline-demo` 的部署、运维、故障排查。
-> 完整指南见 [`~/.openclaw/workspace/memory/deployment-guide.md`](file:///Users/cclovr/.openclaw/workspace/memory/deployment-guide.md)。
+>
+> - 完整部署指南：[`~/.openclaw/workspace/memory/deployment-guide.md`](file:///Users/cclovr/.openclaw/workspace/memory/deployment-guide.md)
+> - **SPA 部署 Checklist**（适用于所有前端项目，nginx + Docker 部署规范）：[`~/.openclaw/workspace/memory/spa-deploy-checklist.md`](file:///Users/cclovr/.openclaw/workspace/memory/spa-deploy-checklist.md)
 
 ---
 
